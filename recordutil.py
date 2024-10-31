@@ -26,29 +26,29 @@ def get_channels(record, channel_names):
   return channels
 
 
-def write_segments(record_name, input_dir, output_dir, segment_size):  
+def get_segments(record_name, input_dir, segment_size):
+  segments = []
   record = wfdb.rdrecord(os.path.join(input_dir, record_name))
   num_segments = record.p_signal.shape[0] // segment_size
   for i in range(num_segments):
     start_idx = i * segment_size
     end_idx = start_idx + segment_size
     segment_signals = record.p_signal[start_idx:end_idx]
-    wfdb.wrsamp(
-      record_name=os.path.join(f'{record_name}_split_{i}'),
-      write_dir=output_dir,
-      fs=record.fs,
-      units=record.units,
-      sig_name=record.sig_name,
-      p_signal=segment_signals)
+    segments.append(segment_signals)
+  if num_segments % segment_size != 0:
+    remaining_signals = record.p_signal[num_segments * segment_size:, :]
+    segments.append(remaining_signals)
+  return segments
 
 
-def write_all_segments(segment_size):
+def get_all_segments(segment_size):
+  segments = []
   input_dir = os.path.join(data_dir, 'processed_data')
-  output_dir = os.path.join(data_dir, f'processed_data_size_{segment_size}')
-  if not os.path.exists(output_dir):
-    os.makedirs(output_dir)
+  # output_dir = os.path.join(data_dir, f'processed_data_size_{segment_size}')
+  # if not os.path.exists(output_dir):
+  #   os.makedirs(output_dir)
   for record_name in get_record_names(input_dir):
-    write_segments(record_name, input_dir, output_dir, segment_size)
+    segments.extend(get_segments(record_name, input_dir, segment_size))
 
 
 def get_train_and_test_records(dirname):
