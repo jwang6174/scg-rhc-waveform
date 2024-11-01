@@ -26,7 +26,7 @@ def get_channels(record, channel_names):
   return channels
 
 
-def get_segments(record_name, input_dir, segment_size):
+def get_segments_from_record(record_name, input_dir, segment_size):
   segments = []
   record = wfdb.rdrecord(os.path.join(input_dir, record_name))
   num_segments = record.p_signal.shape[0] // segment_size
@@ -41,16 +41,9 @@ def get_segments(record_name, input_dir, segment_size):
   return segments
 
 
-def get_all_segments(segment_size):
+def get_segments(segment_size):
   segments = []
   input_dir = os.path.join(data_dir, 'processed_data')
-  # output_dir = os.path.join(data_dir, f'processed_data_size_{segment_size}')
-  # if not os.path.exists(output_dir):
-  #   os.makedirs(output_dir)
   for record_name in get_record_names(input_dir):
     segments.extend(get_segments(record_name, input_dir, segment_size))
-
-
-def get_train_and_test_records(dirname):
-  records = get_records(dirname)
-  train_records, test_records = train_test_split(records, test_size=0.2)
+  return segments
