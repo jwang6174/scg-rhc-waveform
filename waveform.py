@@ -2,55 +2,42 @@ import os
 import wfdb
 import torch
 import torch.nn as nn
+import torch.nn.functional as F
 import torch.autograd as autograd
-from torch.utils.data import Dataset, DataLoader
 import numpy as np
+from torch.utils.data import Dataset, DataLoader
+from sklearn.model_selection import train_test_split
 
-from explore import get_rhc_records
-
-torch.autograd.set_detect_anomaly(True)
-
+from recordutil import get_scg_rhc_segments
 
 class SCGDataset(Dataset):
-  def __init__(self, records, length):
-    self.records = records
-    self.length = length
 
-  def _pad(self, tensor):
-    if tensor.shape[-1] < self.length:
-        padding = self.length - tensor.shape[-1]
+  def __init__(self, segments, segment_size):
+    self.segments = segments
+    self.segment_size = segment_size
+
+  def pad(self, tensor):
+    if tensor.shape[-1] < self.segment_size:
+        padding = self.segment_size - tensor.shape[-1]
         tensor = torch.nn.functional.pad(tensor, (0, padding))
-    elif tensor.shape[-1] > self.length:
-        tensor = tensor[:, :, :self.length]
+    elif tensor.shape[-1] > self.segment_size:
+        tensor = tensor[:, :, :self.segment_size]
     return tensor
 
-  def _minmax_norm(self, signal):
-    signal = (signal - np.min(signal)) / (np.max(signal) - np.min(signal) + 0.0001)
-    return signal
+  def minmax_norm(self, tensor):
+    tensor = (tensor - np.min(tensor)) / (np.max(tensor) - np.min(tensor) + 0.0001)
+    return tensor
 
-  def _get_channels(self, record, channel_names):
-    indexes = [record.sig_name.index(name) for name in channel_names]
-    channels = record.p_signal[:, indexes]
-    return channels
+  def invert(self, tensor):
+    return torch.tensor(tensor.T, dtype=torch.float32)
 
   def __len__(self):
-    return len(self.records)
+    return len(self.segments)
 
   def __getitem__(self, index):
-    record = wfdb.rdrecord(self.records[index])
-
-    # Select patch ACG signals as input for neural net.
-    scg_signal = self._get_channels(record, channel_names=['patch_ACC_lat', 'patch_ACC_hf', 'patch_ACC_dv'])
-    scg_signal = self._minmax_norm(scg_signal)
-    scg_tensor = torch.tensor(scg_signal.T, dtype=torch.float32).unsqueeze(0)
-    scg_tensor = self._pad(scg_tensor)
-
-    # Select patch RHC signals as labels for neural net.
-    rhc_signal = self._get_channels(record, channel_names=['RHC_pressure'])
-    rhc_signal = self._minmax_norm(rhc_signal)
-    rhc_tensor = torch.tensor(rhc_signal.T, dtype=torch.float32).unsqueeze(0)
-    rhc_tensor = self._pad(rhc_tensor)
-
+    segments = self.segments[index]
+    scg_tensor = self.pad(self.invert(self.minmax_norm(segments[0])))
+    rhc_tensor = self.pad(self.invert(self.minmax_norm(segments[1])))
     return scg_tensor, rhc_tensor
 
 
@@ -82,8 +69,7 @@ class AttentionGate(nn.Module):
   def forward(self, g, x):
     g1 = self.W_g(g)
     x1 = self.W_x(x)
-    psi = self.relu(g1 + x1)
-    psi = self.psi(psi)
+    psi = self.psi(self.relu(g1 + x1))
     return x * psi
 
 
@@ -111,6 +97,27 @@ class AttentionUNetGenerator(nn.Module):
   3. Up-Convolutions for Upsampling:
   The decoder path uses transposed convolutions (ConvTranspose1d) to upsample the feature maps.
   This ensures that the output has the same resolution as the input.
+
+  Odd dimensions may occur in the data, which can be addressed by adding padding to ensure
+  compatibility between encoder and decoder features. In U-Net models, dimensions are halved at
+  each downsampling stage (via max pooling). When working with odd dimensions, this process may
+  result in shapes that are incompatible for concatenation in skip connections. There are two 
+  potential options to handle odd dimensions in a U-Net generator:
+
+  1. Adjust Padding for Conv Layers
+  - Use padding in the conv_block to maintain spatial dimensions at each layer.
+  - At the downsampling (pooling stage), add padding as necessary to ensure each layer has even
+  dimensions before being downsampled.
+
+  2. Center Cropping in Decoder (Optional)
+  - If padding is not desirable, can crop the upsampled feature maps to slightly match the
+  encoder feature map dimensions in the skip connections.
+
+  Another issue that may arise is discrepancy between the input and output lengths provided by the
+  generator, which is likely due to the downsampling and upsampling operations. Specifically,
+  pooling and convolutional layers can reduce the spatial dimensions, and when we upsample in the
+  decoder path, it doesn't always perfectly match the original input length, especially if the
+  input length is not a multiple of the downsampling factor.
   """
   def __init__(self, in_channels, out_channels):
     super(AttentionUNetGenerator, self).__init__()
@@ -145,7 +152,14 @@ class AttentionUNetGenerator(nn.Module):
       return nn.ConvTranspose1d(in_channels, out_channels, kernel_size=2, stride=2)
 
   def max_pool(self, x):
-    return nn.functional.max_pool1d(x, kernel_size=2, stride=2)
+    return F.max_pool1d(x, kernel_size=2, stride=2, ceil_mode=True)
+
+  def match_length(self, target, source):
+    if source.size(2) < target.size(2):
+      target = target[..., :source.size(-1)]
+    elif source.size(2) > target.size(2):
+      target = F.pad(target, (0, source.size(2) - target.size(2)))
+    return target
 
   def forward(self, x):
     e1 = self.encoder1(x)
@@ -156,21 +170,27 @@ class AttentionUNetGenerator(nn.Module):
     b = self.bottleneck(self.max_pool(e4))
 
     d1 = self.up1(b)
+    d1 = self.match_length(d1, e4)
     e4 = self.attention1(d1, e4)
     d1 = self.decoder1(torch.cat((d1, e4), dim=1))
 
     d2 = self.up2(d1)
+    d2 = self.match_length(d2, e3)
     e3 = self.attention2(d2, e3)
     d2 = self.decoder2(torch.cat((d2, e3), dim=1))
 
     d3 = self.up3(d2)
+    d3 = self.match_length(d3, e2)
     d2 = self.attention3(d3, e2)
     d3 = self.decoder3(torch.cat((d3, e2), dim=1))
 
     d4 = self.up4(d3)
+    d4 = self.match_length(d4, e1)
     d4 = self.decoder4(torch.cat((d4, e1), dim=1))
 
-    return self.final(d4)
+    f = self.final(d4)
+    f = self.match_length(f, x)
+    return f
 
 
 class PatchGANDiscriminator(nn.Module):
@@ -261,7 +281,7 @@ def compute_gradient_penalty(discriminator, scg, real_pap, fake_pap):
   return gradient_penalty
 
 
-def run_conditional_GAN(dataloader):
+def run_conditional_GAN():
   """
   A Conditional Generative Adversarial Network (cGAN) is a type of GAN where both the generator
   and discriminator are conditioned on additional information. This extra information can be
@@ -303,21 +323,25 @@ def run_conditional_GAN(dataloader):
   A gradient penalty is also used to enforce the Liipschitz continuity of the discriminator by
   penalizing gradients with norms that deviate from 1.
   """
+  segment_size = 375
+  segments = get_scg_rhc_segments(segment_size)
+  train_segments, _ = train_test_split(segments)
+  train_set = SCGDataset(train_segments, segment_size)
+
+  lambda_gp = 10
+  num_epochs = 10
+  train_loader = DataLoader(train_set, batch_size=32, shuffle=True)
   generator = AttentionUNetGenerator(in_channels=3, out_channels=1)
   discriminator = PatchGANDiscriminator(in_channels=3, condition_channels=1, n_filters=64)
   optimizer_G = torch.optim.Adam(generator.parameters(), lr=0.0001, betas=(0.5, 0.999))
   optimizer_D = torch.optim.Adam(discriminator.parameters(), lr=0.0001, betas=(0.5, 0.999))
   criterion_L2 = nn.MSELoss()
-  lambda_gp = 10
-  num_epochs = 500
 
   for epoch in range(num_epochs):
 
-    for i, (scg, pap) in enumerate(dataloader):
+    for i, (scg, pap) in enumerate(train_loader):
 
-      # ---------------
       # Train generator
-      # ---------------
       optimizer_G.zero_grad()
       fake_pap = generator(scg)
       fake_validity = discriminator(torch.cat((scg, fake_pap), dim=1))
@@ -328,14 +352,6 @@ def run_conditional_GAN(dataloader):
       # Euclidean loss (L2) between generated and real PAP waveforms
       g_loss_l2 = criterion_L2(fake_pap, pap)
 
-      # GAN loss
-      # g_loss_gan = criterion_GAN(fake_validity, torch.ones_like(fake_validity))
-
-      # L1 loss for better generation quality
-      # g_loss_l1 = criterion_L1(fake_pap, pap)
-      # g_loss = g_loss_gan + 100 * g_loss_l1
-      # g_loss.backward(retain_graph=True)
-
       # Combined generator loss
       g_loss = g_loss_wasserstein + 100 * g_loss_l2
       g_loss.backward()
@@ -345,9 +361,7 @@ def run_conditional_GAN(dataloader):
 
       optimizer_G.step()
 
-      # ----------------------------
       # Train discriminator (critic)
-      # ----------------------------
       optimizer_D.zero_grad()
       real_validity = discriminator(torch.cat((scg, pap), dim=1))
       fake_pap = generator(scg)
@@ -362,13 +376,12 @@ def run_conditional_GAN(dataloader):
 
       optimizer_D.step()
 
-      # Print progress every 10 batches
-      if i % 10 == 0:
-        print(f'Epoch [{epoch+1}/{num_epochs}] Batch [{i}/{len(dataloader)}]')
-        print(f'   Generator Loss: {g_loss.item():.4f}')
-        print(f'   Discriminator Loss: {d_loss.item():.4f}')
+      # Print progress
+      print(f'Epoch [{epoch+1}/{num_epochs}] Batch [{i+1}/{len(train_loader)}]')
+      print(f'   Generator Loss: {g_loss.item():.4f}')
+      print(f'   Discriminator Loss: {d_loss.item():.4f}')
 
-    # Save model checkpoints every 1 epoch
+    # Save model checkpoints every epoch
     checkpoint = {
       'epoch': epoch,
       'generator_state_dict': generator.state_dict(),
@@ -381,8 +394,11 @@ def run_conditional_GAN(dataloader):
     torch.save(checkpoint, 'checkpoint.pth')
     print('Saved checkpoint')
 
-
-if __name__ == '__main__':
-  records = get_rhc_records()
-  dataset = SCGDataset(records, length=1024)
-  run_conditional_GAN(dataset)
+  # Plot the losses after training
+  plt.plot(g_losses, label='Generator Loss')
+  plt.plot(d_losses, label='Discriminator Loss')
+  plt.xlabel('Iteration')
+  plt.ylabel('Loss')
+  plt.title('Generator and Discriminator Loss During Training')
+  plt.legend()
+  plt.show()
