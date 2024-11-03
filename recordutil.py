@@ -1,15 +1,16 @@
 import os
 import wfdb
 from pathlib import Path
-from sklearn.model_selection import train_test_split
 
 data_dir = os.path.join('/', 'Users', 'jessewang', 'MyStuff', 'Projects', 'SCG-RHC', 'data')
+processed_data_dir = os.path.join(data_dir, 'processed_data')
+
 
 def get_record_names(dirname):
   filenames = set()
   for filename in os.listdir(dirname):
     filenames.add(Path(filename).stem)
-  return filenames
+  return list(filenames)
 
 
 def get_records(dirname):
@@ -26,24 +27,26 @@ def get_channels(record, channel_names):
   return channels
 
 
-def get_segments_from_record(record_name, input_dir, segment_size):
+def get_scg_rhc_segments_from_record(record, segment_size):
+  try:
+    scg_signal = get_channels(record, channel_names=['patch_ACC_lat', 'patch_ACC_hf', 'patch_ACC_dv'])
+    rhc_signal = get_channels(record, channel_names=['RHC_pressure'])
+  except ValueError:
+    return []
+
   segments = []
-  record = wfdb.rdrecord(os.path.join(input_dir, record_name))
   num_segments = record.p_signal.shape[0] // segment_size
   for i in range(num_segments):
     start_idx = i * segment_size
-    end_idx = start_idx + segment_size
-    segment_signals = record.p_signal[start_idx:end_idx]
-    segments.append(segment_signals)
-  if num_segments % segment_size != 0:
-    remaining_signals = record.p_signal[num_segments * segment_size:, :]
-    segments.append(remaining_signals)
+    stop_idx = start_idx + segment_size
+    scg_segment = scg_signal[start_idx:stop_idx]
+    rhc_segment = rhc_signal[start_idx:stop_idx]
+    segments.append((scg_segment, rhc_segment))
   return segments
 
 
-def get_segments(segment_size):
+def get_scg_rhc_segments(segment_size):
   segments = []
-  input_dir = os.path.join(data_dir, 'processed_data')
-  for record_name in get_record_names(input_dir):
-    segments.extend(get_segments(record_name, input_dir, segment_size))
+  for record in get_records(processed_data_dir)[:3]:
+    segments.extend(get_scg_rhc_segments_from_record(record, segment_size))
   return segments
