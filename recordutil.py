@@ -47,6 +47,6 @@ def get_scg_rhc_segments_from_record(record, segment_size):
 
 def get_scg_rhc_segments(segment_size):
   segments = []
-  for record in get_records(processed_data_dir)[:3]:
+  for record in get_records(processed_data_dir):
     segments.extend(get_scg_rhc_segments_from_record(record, segment_size))
   return segments
