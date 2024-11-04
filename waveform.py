@@ -7,6 +7,7 @@ import torch.autograd as autograd
 import numpy as np
 from torch.utils.data import Dataset, DataLoader
 from sklearn.model_selection import train_test_split
+from matplotlib import pyplot as plt
 
 from recordutil import get_scg_rhc_segments
 
@@ -325,7 +326,8 @@ def run_conditional_GAN():
   """
   segment_size = 375
   segments = get_scg_rhc_segments(segment_size)
-  train_segments, _ = train_test_split(segments)
+  train_and_validation_segments, test_segments = train_test_split(segments, train_size=0.9)
+  train_segments, validation_segments = train_test_split(train_and_validation_segments, train_size=0.9)
   train_set = SCGDataset(train_segments, segment_size)
 
   lambda_gp = 10
@@ -336,6 +338,9 @@ def run_conditional_GAN():
   optimizer_G = torch.optim.Adam(generator.parameters(), lr=0.0001, betas=(0.5, 0.999))
   optimizer_D = torch.optim.Adam(discriminator.parameters(), lr=0.0001, betas=(0.5, 0.999))
   criterion_L2 = nn.MSELoss()
+
+  G_losses = []
+  D_losses = []
 
   for epoch in range(num_epochs):
 
@@ -354,6 +359,7 @@ def run_conditional_GAN():
 
       # Combined generator loss
       g_loss = g_loss_wasserstein + 100 * g_loss_l2
+      G_losses.append(g_loss.item())
       g_loss.backward()
 
       # Apply gradient clipping to limit the magnitude of gradients
@@ -369,6 +375,7 @@ def run_conditional_GAN():
       d_loss = -torch.mean(real_validity) + torch.mean(fake_validity)
       gradient_penalty = compute_gradient_penalty(discriminator, scg, pap, fake_pap)
       d_loss_total = d_loss + lambda_gp * gradient_penalty
+      D_losses.append(d_loss_total.item())
       d_loss_total.backward()
 
       # Apply gradient clipping to limit the magnitude of gradients
@@ -378,8 +385,8 @@ def run_conditional_GAN():
 
       # Print progress
       print(f'Epoch [{epoch+1}/{num_epochs}] Batch [{i+1}/{len(train_loader)}]')
-      print(f'   Generator Loss: {g_loss.item():.4f}')
-      print(f'   Discriminator Loss: {d_loss.item():.4f}')
+      print(f'   G Loss: {g_loss.item():.4f}')
+      print(f'   D Loss Total: {d_loss_total.item():.4f}')
 
     # Save model checkpoints every epoch
     checkpoint = {
@@ -395,8 +402,8 @@ def run_conditional_GAN():
     print('Saved checkpoint')
 
   # Plot the losses after training
-  plt.plot(g_losses, label='Generator Loss')
-  plt.plot(d_losses, label='Discriminator Loss')
+  plt.plot(G_losses, label='Generator Loss')
+  plt.plot(D_losses, label='Discriminator Loss')
   plt.xlabel('Iteration')
   plt.ylabel('Loss')
   plt.title('Generator and Discriminator Loss During Training')
