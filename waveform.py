@@ -1,4 +1,5 @@
 import os
+import pickle
 import wfdb
 import torch
 import torch.nn as nn
@@ -346,28 +347,28 @@ def run_conditional_GAN():
 
     for i, (scg, pap) in enumerate(train_loader):
 
-      # Train generator
+      # Train generator.
       optimizer_G.zero_grad()
       fake_pap = generator(scg)
       fake_validity = discriminator(torch.cat((scg, fake_pap), dim=1))
 
-      # Wasserstein loss for generator (maximize critic's score for fake)
+      # Wasserstein loss for generator (maximize critic's score for fake).
       g_loss_wasserstein = -torch.mean(fake_validity)
 
-      # Euclidean loss (L2) between generated and real PAP waveforms
+      # Euclidean loss (L2) between generated and real PAP waveforms.
       g_loss_l2 = criterion_L2(fake_pap, pap)
 
-      # Combined generator loss
+      # Combined generator loss.
       g_loss = g_loss_wasserstein + 100 * g_loss_l2
       G_losses.append(g_loss.item())
       g_loss.backward()
 
-      # Apply gradient clipping to limit the magnitude of gradients
+      # Apply gradient clipping to limit the magnitude of gradients.
       torch.nn.utils.clip_grad_norm_(generator.parameters(), 1)
 
       optimizer_G.step()
 
-      # Train discriminator (critic)
+      # Train discriminator (critic).
       optimizer_D.zero_grad()
       real_validity = discriminator(torch.cat((scg, pap), dim=1))
       fake_pap = generator(scg)
@@ -378,17 +379,17 @@ def run_conditional_GAN():
       D_losses.append(d_loss_total.item())
       d_loss_total.backward()
 
-      # Apply gradient clipping to limit the magnitude of gradients
+      # Apply gradient clipping to limit the magnitude of gradients.
       torch.nn.utils.clip_grad_norm_(discriminator.parameters(), 1)
 
       optimizer_D.step()
 
-      # Print progress
+      # Print progress.
       print(f'Epoch [{epoch+1}/{num_epochs}] Batch [{i+1}/{len(train_loader)}]')
       print(f'   G Loss: {g_loss.item():.4f}')
       print(f'   D Loss Total: {d_loss_total.item():.4f}')
 
-    # Save model checkpoints every epoch
+    # Save model checkpoints every epoch.
     checkpoint = {
       'epoch': epoch,
       'generator_state_dict': generator.state_dict(),
@@ -401,11 +402,23 @@ def run_conditional_GAN():
     torch.save(checkpoint, 'checkpoint.pth')
     print('Saved checkpoint')
 
-  # Plot the losses after training
+  # Save training set.
+  with open('training_set.pickle', 'wb') as f:
+    pickle.dump(training_set)
+  
+  # Save validation set.
+  with open('validation_set.pickle', 'wb') as f:
+    pickle.dump(validation_set)
+
+  # Save test set.
+  with open('test_set.pickle', 'wb') as f:
+    pickle.dump(test_set)
+
+  # Create plot of losses after training.
   plt.plot(G_losses, label='Generator Loss')
   plt.plot(D_losses, label='Discriminator Loss')
   plt.xlabel('Iteration')
   plt.ylabel('Loss')
   plt.title('Generator and Discriminator Loss During Training')
   plt.legend()
-  plt.show()
+  plt.savefig('losses.png')
