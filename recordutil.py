@@ -2,14 +2,15 @@ import os
 import wfdb
 from pathlib import Path
 
-data_dir = os.path.join('/', 'Users', 'jessewang', 'MyStuff', 'Projects', 'SCG-RHC', 'data')
+data_dir = os.path.join('/', 'home', 'jesse', 'physionet.org', 'files', 'scg-rhc-wearable-database', '1.0.0')
 processed_data_dir = os.path.join(data_dir, 'processed_data')
 
 
 def get_record_names(dirname):
   filenames = set()
   for filename in os.listdir(dirname):
-    filenames.add(Path(filename).stem)
+    if filename.endswith('.dat') or filename.endswith('.hea'):
+      filenames.add(Path(filename).stem)
   return list(filenames)
 
 
