@@ -322,7 +322,7 @@ def run_conditional_GAN():
   the generated output and the ground truth. It computes the squared difference between the
   predicted output and the target.
 
-  A gradient penalty is also used to enforce the Liipschitz continuity of the discriminator by
+  A gradient penalty is also used to enforce the Lipschitz continuity of the discriminator by
   penalizing gradients with norms that deviate from 1.
   """
   segment_size = 375
@@ -330,15 +330,21 @@ def run_conditional_GAN():
   train_and_validation_segments, test_segments = train_test_split(segments, train_size=0.9)
   train_segments, validation_segments = train_test_split(train_and_validation_segments, train_size=0.9)
   train_set = SCGDataset(train_segments, segment_size)
-
-  lambda_gp = 10
-  num_epochs = 10
   train_loader = DataLoader(train_set, batch_size=32, shuffle=True)
+
+  num_epochs = 10
   generator = AttentionUNetGenerator(in_channels=3, out_channels=1)
   discriminator = PatchGANDiscriminator(in_channels=3, condition_channels=1, n_filters=64)
   optimizer_G = torch.optim.Adam(generator.parameters(), lr=0.0001, betas=(0.5, 0.999))
   optimizer_D = torch.optim.Adam(discriminator.parameters(), lr=0.0001, betas=(0.5, 0.999))
   criterion_L2 = nn.MSELoss()
+  lambda_gp = 10
+  
+  device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+  print(f'Using device: {device}')
+  generator = generator.to(device)
+  discriminator = discriminator.to(device)
+  criterion_L2 = criterion_L2.to(device)
 
   G_losses = []
   D_losses = []
@@ -346,6 +352,9 @@ def run_conditional_GAN():
   for epoch in range(num_epochs):
 
     for i, (scg, pap) in enumerate(train_loader):
+
+      scg = scg.to(device)
+      pap = pap.to(device)
 
       # Train generator.
       optimizer_G.zero_grad()
