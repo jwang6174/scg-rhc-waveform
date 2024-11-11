@@ -12,6 +12,10 @@ from matplotlib import pyplot as plt
 
 from recordutil import get_scg_rhc_segments
 
+results_dir = 'waveform_results'
+if not os.path.exists(results_dir):
+  os.mkdir(results_dir)
+
 class SCGDataset(Dataset):
 
   def __init__(self, segments, segment_size):
@@ -331,6 +335,18 @@ def run_conditional_GAN():
   train_segments, validation_segments = train_test_split(train_and_validation_segments, train_size=0.9)
   train_set = SCGDataset(train_segments, segment_size)
   train_loader = DataLoader(train_set, batch_size=32, shuffle=True)
+  
+  # Save training set.
+  with open(os.path.join(results_dir, 'training_set.pickle'), 'wb') as f:
+    pickle.dump(train_segments, f)
+  
+  # Save validation set.
+  with open(os.path.join(results_dir, 'validation_set.pickle'), 'wb') as f:
+    pickle.dump(validation_segments, f)
+
+  # Save test set.
+  with open(os.path.join(results_dir, 'test_set.pickle'), 'wb') as f:
+    pickle.dump(test_segments, f)
 
   num_epochs = 1
   generator = AttentionUNetGenerator(in_channels=3, out_channels=1)
@@ -399,6 +415,15 @@ def run_conditional_GAN():
         print(f'   G Loss: {g_loss.item():.4f}')
         print(f'   D Loss Total: {d_loss_total.item():.4f}')
 
+        # Create plot of losses after training every epoch.
+        plt.plot(G_losses, label='Generator Loss')
+        plt.plot(D_losses, label='Discriminator Loss')
+        plt.xlabel('Iteration')
+        plt.ylabel('Loss')
+        plt.legend()
+        plt.savefig(os.path.join(results_dir, 'losses.png'))
+        plt.close()
+
     # Save model checkpoints every epoch.
     checkpoint = {
       'epoch': epoch,
@@ -409,26 +434,7 @@ def run_conditional_GAN():
       'g_loss': g_loss,
       'd_loss_total': d_loss_total
     }
-    torch.save(checkpoint, 'checkpoint.pth')
+    torch.save(checkpoint, os.path.join(results_dir, 'checkpoint.pth'))
     print('Saved checkpoint')
 
-  # Save training set.
-  with open('training_set.pickle', 'wb') as f:
-    pickle.dump(train_segments, f)
-  
-  # Save validation set.
-  with open('validation_set.pickle', 'wb') as f:
-    pickle.dump(validation_segments, f)
 
-  # Save test set.
-  with open('test_set.pickle', 'wb') as f:
-    pickle.dump(test_segments, f)
-
-  # Create plot of losses after training.
-  plt.plot(G_losses, label='Generator Loss')
-  plt.plot(D_losses, label='Discriminator Loss')
-  plt.xlabel('Iteration')
-  plt.ylabel('Loss')
-  plt.title('Generator and Discriminator Loss During Training')
-  plt.legend()
-  plt.savefig('losses.png')
