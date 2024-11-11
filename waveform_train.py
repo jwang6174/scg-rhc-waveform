@@ -332,7 +332,7 @@ def run_conditional_GAN():
   train_set = SCGDataset(train_segments, segment_size)
   train_loader = DataLoader(train_set, batch_size=32, shuffle=True)
 
-  num_epochs = 3
+  num_epochs = 1
   generator = AttentionUNetGenerator(in_channels=3, out_channels=1)
   discriminator = PatchGANDiscriminator(in_channels=3, condition_channels=1, n_filters=64)
   optimizer_G = torch.optim.Adam(generator.parameters(), lr=0.0001, betas=(0.5, 0.999))
