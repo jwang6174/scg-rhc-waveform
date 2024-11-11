@@ -348,7 +348,7 @@ def run_conditional_GAN():
   with open(os.path.join(results_dir, 'test_set.pickle'), 'wb') as f:
     pickle.dump(test_segments, f)
 
-  num_epochs = 1
+  num_epochs = 10
   generator = AttentionUNetGenerator(in_channels=3, out_channels=1)
   discriminator = PatchGANDiscriminator(in_channels=3, condition_channels=1, n_filters=64)
   optimizer_G = torch.optim.Adam(generator.parameters(), lr=0.0001, betas=(0.5, 0.999))
