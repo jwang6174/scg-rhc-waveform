@@ -332,7 +332,7 @@ def run_conditional_GAN():
   train_set = SCGDataset(train_segments, segment_size)
   train_loader = DataLoader(train_set, batch_size=32, shuffle=True)
 
-  num_epochs = 10
+  num_epochs = 3
   generator = AttentionUNetGenerator(in_channels=3, out_channels=1)
   discriminator = PatchGANDiscriminator(in_channels=3, condition_channels=1, n_filters=64)
   optimizer_G = torch.optim.Adam(generator.parameters(), lr=0.0001, betas=(0.5, 0.999))
@@ -393,10 +393,11 @@ def run_conditional_GAN():
 
       optimizer_D.step()
 
-      # Print progress.
-      print(f'Epoch [{epoch+1}/{num_epochs}] Batch [{i+1}/{len(train_loader)}]')
-      print(f'   G Loss: {g_loss.item():.4f}')
-      print(f'   D Loss Total: {d_loss_total.item():.4f}')
+      # Print progress every 100 batches.
+      if i % 100 == 0 or i == len(train_loader) - 1:
+        print(f'Epoch [{epoch+1}/{num_epochs}] Batch [{i+1}/{len(train_loader)}]')
+        print(f'   G Loss: {g_loss.item():.4f}')
+        print(f'   D Loss Total: {d_loss_total.item():.4f}')
 
     # Save model checkpoints every epoch.
     checkpoint = {
@@ -413,15 +414,15 @@ def run_conditional_GAN():
 
   # Save training set.
   with open('training_set.pickle', 'wb') as f:
-    pickle.dump(training_set)
+    pickle.dump(train_segments, f)
   
   # Save validation set.
   with open('validation_set.pickle', 'wb') as f:
-    pickle.dump(validation_set)
+    pickle.dump(validation_segments, f)
 
   # Save test set.
   with open('test_set.pickle', 'wb') as f:
-    pickle.dump(test_set)
+    pickle.dump(test_segments, f)
 
   # Create plot of losses after training.
   plt.plot(G_losses, label='Generator Loss')
