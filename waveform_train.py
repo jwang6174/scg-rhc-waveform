@@ -1,20 +1,34 @@
+import numpy as np
 import os
 import pickle
-import wfdb
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
 import torch.autograd as autograd
-import numpy as np
+import wfdb
 from torch.utils.data import Dataset, DataLoader
 from sklearn.model_selection import train_test_split
 from matplotlib import pyplot as plt
 
 from recordutil import get_scg_rhc_segments
 
-results_dir = 'waveform_results'
-if not os.path.exists(results_dir):
-  os.mkdir(results_dir)
+# Define results directory path.
+results_dir_path = 'waveform_results'
+
+# Make results directory if not exists.
+if not os.path.exists(results_dir_path):
+  os.makedirs(results_dir_path)
+
+# Define paths for training, validation, and test sets.
+train_set_path = os.path.join(results_dir_path, 'train_set.pickle')
+valid_set_path = os.path.join(results_dir_path, 'valid_set.pickle')
+test_set_path = os.path.join(results_dir_path, 'test_set.pickle')
+
+# Define model path.
+model_path = os.path.join(results_dir_path, 'model.pth')
+
+# Define losses figure path.
+losses_path = os.path.join(results_dir_path, 'losses.png')
 
 class SCGDataset(Dataset):
 
@@ -337,15 +351,15 @@ def run_conditional_GAN():
   train_loader = DataLoader(train_set, batch_size=32, shuffle=True)
   
   # Save training set.
-  with open(os.path.join(results_dir, 'training_set.pickle'), 'wb') as f:
+  with open(train_set_path, 'wb') as f:
     pickle.dump(train_segments, f)
   
   # Save validation set.
-  with open(os.path.join(results_dir, 'validation_set.pickle'), 'wb') as f:
+  with open(valid_set_path, 'wb') as f:
     pickle.dump(validation_segments, f)
 
   # Save test set.
-  with open(os.path.join(results_dir, 'test_set.pickle'), 'wb') as f:
+  with open(test_set_path, 'wb') as f:
     pickle.dump(test_segments, f)
 
   num_epochs = 10
@@ -419,7 +433,7 @@ def run_conditional_GAN():
         plt.xlabel('Iteration')
         plt.ylabel('Loss')
         plt.legend()
-        plt.savefig(os.path.join(results_dir, 'losses.png'))
+        plt.savefig(losses_path)
         plt.close()
 
     # Save model checkpoints every epoch.
@@ -432,6 +446,6 @@ def run_conditional_GAN():
       'g_loss': g_loss,
       'd_loss_total': d_loss_total
     }
-    torch.save(checkpoint, os.path.join(results_dir, 'checkpoint.pth'))
+    torch.save(checkpoint, model_path)
     print('Saved checkpoint')
 
