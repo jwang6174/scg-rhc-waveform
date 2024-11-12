@@ -412,10 +412,8 @@ def run_conditional_GAN():
       # Print progress every 100 batches.
       if i % 100 == 0 or i == len(train_loader) - 1:
         print(f'Epoch [{epoch+1}/{num_epochs}] Batch [{i+1}/{len(train_loader)}]')
-        print(f'   G Loss: {g_loss.item():.4f}')
-        print(f'   D Loss Total: {d_loss_total.item():.4f}')
 
-        # Create plot of losses after training every epoch.
+        # Create plot of losses.
         plt.plot(G_losses, label='Generator Loss')
         plt.plot(D_losses, label='Discriminator Loss')
         plt.xlabel('Iteration')
@@ -436,5 +434,4 @@ def run_conditional_GAN():
     }
     torch.save(checkpoint, os.path.join(results_dir, 'checkpoint.pth'))
     print('Saved checkpoint')
-
 
