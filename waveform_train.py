@@ -24,8 +24,8 @@ train_set_path = os.path.join(results_dir_path, 'train_set.pickle')
 valid_set_path = os.path.join(results_dir_path, 'valid_set.pickle')
 test_set_path = os.path.join(results_dir_path, 'test_set.pickle')
 
-# Define model path.
-model_path = os.path.join(results_dir_path, 'model.pth')
+# Define checkpoint path.
+checkpoint_path = os.path.join(results_dir_path, 'checkpoint.pth')
 
 # Define losses figure path.
 losses_path = os.path.join(results_dir_path, 'losses.png')
@@ -128,7 +128,7 @@ class AttentionUNetGenerator(nn.Module):
   - Use padding in the conv_block to maintain spatial dimensions at each layer.
   - At the downsampling (pooling stage), add padding as necessary to ensure each layer has even
   dimensions before being downsampled.
-
+f
   2. Center Cropping in Decoder (Optional)
   - If padding is not desirable, can crop the upsampled feature maps to slightly match the
   encoder feature map dimensions in the skip connections.
@@ -446,6 +446,5 @@ def run_conditional_GAN():
       'g_loss': g_loss,
       'd_loss_total': d_loss_total
     }
-    torch.save(checkpoint, model_path)
+    torch.save(checkpoint, checkpoint_path)
     print('Saved checkpoint')
-
