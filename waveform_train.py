@@ -105,7 +105,7 @@ class AttentionUNetGenerator(nn.Module):
   resolution as the input.
 
   1. Attention Gate:
-  The attention gate compuates an attentipn map using both the encoder output (skip connection) and
+  The attention gate computes an attention map using both the encoder output (skip connection) and
   the decoder output. The encoder features are multiplied by this attention map before being
   concatenated with the decoder features.
 
@@ -382,7 +382,6 @@ def run_conditional_GAN():
   for epoch in range(num_epochs):
 
     for i, (scg, pap) in enumerate(train_loader):
-
       scg = scg.to(device)
       pap = pap.to(device)
 
@@ -448,3 +447,6 @@ def run_conditional_GAN():
     }
     torch.save(checkpoint, checkpoint_path)
     print('Saved checkpoint')
+
+if __name__ == '__main__':
+  run_conditional_GAN()
