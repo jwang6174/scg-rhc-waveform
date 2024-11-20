@@ -343,8 +343,9 @@ def run_conditional_GAN():
   A gradient penalty is also used to enforce the Lipschitz continuity of the discriminator by
   penalizing gradients with norms that deviate from 1.
   """
-  segment_size = 375
-  segments = get_scg_rhc_segments(segment_size)
+  segment_size=750
+  scg_channel_names=['patch_ACC_lat', 'patch_ACC_hf']
+  segments = get_scg_rhc_segments(scg_channel_names, segment_size)
   train_and_validation_segments, test_segments = train_test_split(segments, train_size=0.9)
   train_segments, validation_segments = train_test_split(train_and_validation_segments, train_size=0.9)
   train_set = SCGDataset(train_segments, segment_size)
@@ -362,9 +363,9 @@ def run_conditional_GAN():
   with open(test_set_path, 'wb') as f:
     pickle.dump(test_segments, f)
 
-  num_epochs = 10
-  generator = AttentionUNetGenerator(in_channels=3, out_channels=1)
-  discriminator = PatchGANDiscriminator(in_channels=3, condition_channels=1, n_filters=64)
+  num_epochs = 100
+  generator = AttentionUNetGenerator(in_channels=len(scg_channel_names), out_channels=1)
+  discriminator = PatchGANDiscriminator(in_channels=len(scg_channel_names), condition_channels=1, n_filters=64)
   optimizer_G = torch.optim.Adam(generator.parameters(), lr=0.0001, betas=(0.5, 0.999))
   optimizer_D = torch.optim.Adam(discriminator.parameters(), lr=0.0001, betas=(0.5, 0.999))
   criterion_L2 = nn.MSELoss()
