@@ -1,9 +1,10 @@
+import matplotlib.pyplot as plt
 import os
 import wfdb
 from pathlib import Path
 
-data_dir = os.path.join('/', 'home', 'jesse', 'physionet.org', 'files', 'scg-rhc-wearable-database', '1.0.0')
-processed_data_dir = os.path.join(data_dir, 'processed_data')
+path_data_dir = os.path.join('/', 'home', 'jesse', 'physionet.org', 'files', 'scg-rhc-wearable-database', '1.0.0')
+path_processed_data_dir = os.path.join(path_data_dir, 'processed_data')
 
 
 def get_record_names(dirname):
@@ -28,9 +29,9 @@ def get_channels(record, channel_names):
   return channels
 
 
-def get_scg_rhc_segments_from_record(record, segment_size):
+def get_scg_rhc_segments_from_record(record, scg_channel_names, segment_size):
   try:
-    scg_signal = get_channels(record, channel_names=['patch_ACC_lat', 'patch_ACC_hf', 'patch_ACC_dv'])
+    scg_signal = get_channels(record, scg_channel_names)
     rhc_signal = get_channels(record, channel_names=['RHC_pressure'])
   except ValueError:
     return []
@@ -46,8 +47,21 @@ def get_scg_rhc_segments_from_record(record, segment_size):
   return segments
 
 
-def get_scg_rhc_segments(segment_size):
+def get_scg_rhc_segments(scg_channel_names, segment_size):
   segments = []
-  for record in get_records(processed_data_dir):
-    segments.extend(get_scg_rhc_segments_from_record(record, segment_size))
+  for record in get_records(path_processed_data_dir):
+    segments.extend(get_scg_rhc_segments_from_record(record, scg_channel_names, segment_size))
   return segments
+
+
+def save_random_rhc_segment(segment_size):
+  segments = get_scg_rhc_segments(['patch_ACC_lat', 'patch_ACC_hf'], segment_size)
+  _, rhc = segments[0]
+  plt.plot(rhc)
+  plt.savefig('random_rhc.png')
+  plt.close()
+
+
+if __name__ == '__main__':
+  save_random_rhc_segment(segment_size=750)
+
