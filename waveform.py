@@ -178,7 +178,7 @@ if __name__ == '__main__':
   train_set = SCGDataset(train_segments, segment_size)
   train_loader = DataLoader(train_set, batch_size=32, shuffle=True)
   test_set = SCGDataset(test_segments, segment_size)
-  test_loader = DataLoader(test_set, batch_size=32, shuffle=True)
+  test_loader = DataLoader(test_set, batch_size=1, shuffle=True)
 
   with open('waveform_loader_test.pickle', 'wb') as f:
     pickle.dump(train_loader, f)
