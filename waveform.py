@@ -1,11 +1,13 @@
 import matplotlib.pyplot as plt
 import numpy as np
+import pickle
 from sklearn.model_selection import train_test_split
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
 import torch.optim as optim
 from torch.utils.data import Dataset, DataLoader
+
 from recordutil import get_scg_rhc_segments
 
 class AttentionGate(nn.Module):
@@ -169,12 +171,20 @@ if __name__ == '__main__':
   in_channels = len(scg_channels)
   out_channels = 1
   segment_size = 750
-  total_epochs = 10
+  total_epochs = 3
 
   all_segments = get_scg_rhc_segments(scg_channels, segment_size)
   train_segments, test_segments = train_test_split(all_segments, train_size=0.9)
   train_set = SCGDataset(train_segments, segment_size)
   train_loader = DataLoader(train_set, batch_size=32, shuffle=True)
+  test_set = SCGDataset(test_segments, segment_size)
+  test_loader = DataLoader(test_set, batch_size=32, shuffle=True)
+
+  with open('waveform_loader_test.pickle', 'wb') as f:
+    pickle.dump(train_loader, f)
+
+  with open('waveform_loader_train.pickle', 'wb') as f:
+    pickle.dump(test_loader, f)
 
   generator = AttentionUNetGenerator(in_channels, out_channels)
   discriminator = PatchGANDiscriminator(in_channels, out_channels, n_filters=64)
@@ -224,8 +234,9 @@ if __name__ == '__main__':
       optimizer_D.step()
 
       if i % 100 == 0 or i == len(train_loader) - 1:
-        print(f'Epoch {epoch+1}/{total_epochs} | Batch {i+1}/{len(train_loader)}'
-        print(f'  Total D Loss {d_loss_total} | Total G Loss {g_loss_total}')
+        print(f'Epoch {epoch+1}/{total_epochs} | Batch {i+1}/{len(train_loader)}')
+        print(f'  Total D Loss {d_loss_total}')
+        print(f'  Total G Loss {g_loss_total}')
         plt.plot(g_losses, label='Generator loss')
         plt.plot(d_losses, label='Discriminator loss')
         plt.xlabel('Iteration')
