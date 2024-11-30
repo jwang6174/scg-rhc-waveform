@@ -1,3 +1,4 @@
+import matplotlib.pyplot as plt
 import os
 import pickle
 import torch
@@ -6,37 +7,24 @@ from torch.utils.data import DataLoader
 
 from waveform_train import AttentionUNetGenerator, SCGDataset
 
-# Define results directory.
-results_dir = 'waveform_results'
+with open('waveform_loader_test.pickle', 'rb') as f:
+  test_loader = pickle.load(f)
 
-# Define test set path.
-test_set_path = os.path.join(results_dir, 'test_set.pickle')
-
-# Define checkpoint path.
-checkpoint_path = os.path.join(results_dir, 'checkpoint.pth')
-
-# Define test set.
-with open(test_set_path, 'rb') as f:
-  test_set = SCGDataset(segments=pickle.load(f), segment_size=375)
-
-# Define test loader.
-test_loader = DataLoader(test_set, batch_size=1, shuffle=False)
-
-# Load checkpoint and model.
-checkpoint = torch.load(checkpoint_path, weights_only=False)
-generator = AttentionUNetGenerator(in_channels=3, out_channels=1)
+checkpoint = torch.load('waveform_checkpoint.pth', weights_only=False)
+generator = AttentionUNetGenerator(
+  in_channels=checkpoint['in_channels'], 
+  out_channels=checkpoint['out_channels'])
 generator.load_state_dict(checkpoint['generator_state_dict'])
 generator.eval()
 
-# Plot predicted and actual RHC waveforms for a sample.
 for i, (scg, real_rhc) in enumerate(test_loader):
   pred_rhc = generator(scg)[0, 0, :]
-  plt.plot(pred_rhc.detach().numpy())
-  plt.plot(real_rhc[0, 0, :])
-  plt.xlabel('Frame')
+  plt.plot(pred_rhc.detach().numpy(), label='Pred RHC')
+  plt.plot(real_rhc[0, 0, :], label='Real RHC')
+  plt.xlabel('Sample')
   plt.ylabel('mmHg')
   plt.legend()
-  plt.savefig(os.path.join(results_dir, f'test_{i}.png'))
+  plt.savefig(f'waveform_test_plot_{i+1}.png')
   plt.close()
-  if i == 10:
+  if i == 9:
     break
