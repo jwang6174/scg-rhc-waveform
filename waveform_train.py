@@ -171,7 +171,8 @@ if __name__ == '__main__':
   in_channels = len(scg_channels)
   out_channels = 1
   segment_size = 750
-  total_epochs = 3
+  total_epochs = 50
+  criterion_loss = nn.MSELoss()
 
   all_segments = get_scg_rhc_segments(scg_channels, segment_size)
   train_segments, test_segments = train_test_split(all_segments, train_size=0.9)
@@ -190,12 +191,11 @@ if __name__ == '__main__':
   discriminator = PatchGANDiscriminator(in_channels, out_channels, n_filters=64)
   optimizer_G = optim.Adam(generator.parameters(), lr=0.0001, betas=(0.5, 0.999))
   optimizer_D = optim.Adam(discriminator.parameters(), lr=0.0001, betas=(0.5, 0.999))
-  criterion_L2 = nn.MSELoss()
 
   device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
   generator = generator.to(device)
   discriminator = discriminator.to(device)
-  criterion_L2 = criterion_L2.to(device)
+  criterion_loss = criterion_loss.to(device)
 
   nn.utils.clip_grad_norm_(generator.parameters(), 1)
   nn.utils.clip_grad_norm_(discriminator.parameters(), 1)
@@ -216,17 +216,17 @@ if __name__ == '__main__':
 
       fake_rhc = generator(scg)
       fake_rhc_validity = discriminator(torch.cat((scg, fake_rhc), dim=1))
-      g_loss = criterion_L2(fake_rhc, rhc)
+      g_loss = criterion_loss(fake_rhc, rhc)
       g_losses.append(g_loss.item())
       g_loss_total += g_loss
       g_loss.backward()
       optimizer_G.step()
-
+      
       fake_rhc = generator(scg)
-      fake_rhc_validity = discriminator(torch.cat((scg, fake_rhc), dim=1))
+      fake_rhc_validity = discriminator(torch.cat((scg, fake_rhc.detach()), dim=1))
       real_rhc_validity = discriminator(torch.cat((scg, rhc), dim=1))
-      fake_rhc_loss = criterion_L2(fake_rhc_validity, torch.zeros_like(fake_rhc_validity))
-      real_rhc_loss = criterion_L2(real_rhc_validity, torch.ones_like(real_rhc_validity))
+      fake_rhc_loss = criterion_loss(fake_rhc_validity, torch.zeros_like(fake_rhc_validity))
+      real_rhc_loss = criterion_loss(real_rhc_validity, torch.ones_like(real_rhc_validity))
       d_loss = fake_rhc_loss + real_rhc_loss
       d_losses.append(d_loss.item())
       d_loss_total += d_loss
@@ -247,6 +247,10 @@ if __name__ == '__main__':
 
     checkpoint = {
       'epoch': epoch,
+      'scg_channels': scg_channels,
+      'in_channels': in_channels,
+      'out_channels': out_channels,
+      'segment_size': segment_size,
       'generator_state_dict': generator.state_dict(),
       'discriminator_state_dict': discriminator.state_dict()
     }
