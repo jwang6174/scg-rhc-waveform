@@ -112,28 +112,24 @@ class AttentionUNetGenerator(nn.Module):
 
 class PatchGANDiscriminator(nn.Module):
   
-  def __init__(self, in_channels, condition_channels, n_filters):
+  def __init__(self, in_channels, condition_channels, ndf, num_layers):
     super(PatchGANDiscriminator, self).__init__()
     
-    self.model = nn.Sequential(
-        nn.Conv1d(in_channels + condition_channels, n_filters, kernel_size=4, stride=2, padding=1),
-        nn.LeakyReLU(0.2, inplace=True),
+    layers = [
+      nn.Conv1d(in_channels + condition_channels, ndf, kernel_size=4, stride=2, padding=1),
+      nn.LeakyReLU(0.2, inplace=True)
+    ]
 
-        nn.Conv1d(n_filters, n_filters * 2, kernel_size=4, stride=2, padding=1),
-        nn.BatchNorm1d(n_filters * 2),
-        nn.LeakyReLU(0.2, inplace=True),
+    for i in range(1, num_layers):
+      in_channels = ndf * min(2 ** (i - 1), 8)
+      out_channels = ndf * min(2 ** i, 8)
+      layers += [
+        nn.Conv1d(in_channels, out_channels, kernel_size=4, stride=2, padding=1),
+        nn.BatchNorm1d(out_channels),
+        nn.LeakyReLU(0.2, inplace=True)
+      ]
+      self.model = nn.Sequential(*layers)
 
-        nn.Conv1d(n_filters * 2, n_filters * 4, kernel_size=4, stride=2, padding=1),
-        nn.BatchNorm1d(n_filters * 4),
-        nn.LeakyReLU(0.2, inplace=True),
-
-        nn.Conv1d(n_filters * 4, n_filters * 8, kernel_size=4, stride=1, padding=1),
-        nn.BatchNorm1d(n_filters * 8),
-        nn.LeakyReLU(0.2, inplace=True),
-
-        nn.Conv1d(n_filters * 8, 1, kernel_size=4, stride=1, padding=1)
-    )
-   
   def forward(self, x):
     return self.model(x)
 
@@ -167,23 +163,8 @@ class SCGDataset(Dataset):
     rhc = self.pad(self.invert(self.minmax_norm(segments[1])))
     return scg, rhc
 
-def compute_gp(discriminator, scg, real_rhc, fake_rhc):
-  batch_size = real_rhc.size(0)
-  eps = torch.rand(batch_size, 1, 1).to(real_rhc.device)
-  eps = eps.expand_as(real_rhc)
-  interpolation = (eps * real_rhc) + ((1 - eps) * fake_rhc)
-  interp_logits = discriminator(torch.cat((scg, interpolation), dim=1))
-  grad_outputs = torch.ones_like(interp_logits)
-  gradients = autograd.grad(
-    outputs=interp_logits,
-    inputs=interpolation,
-    grad_outputs=grad_outputs,
-    create_graph=True,
-    retain_graph=True
-  )[0]
-  gradients = gradients.view(batch_size, -1)
-  gradient_penalty = ((gradients.norm(2, dim=1) - 1) ** 2).mean()
-  return gradient_penalty
+def least_squares(tensor):
+  return torch.mean(tensor ** 2)
 
 if __name__ == '__main__':
   scg_channels = ['patch_ACC_lat', 'patch_ACC_hf']
@@ -195,8 +176,7 @@ if __name__ == '__main__':
   batch_size = 16
   beta1 = 0.5
   beta2 = 0.999
-  n_critic = 5
-  lambda_gp = 10
+  n_critic = 2
   criterion = nn.MSELoss()
 
   all_segments = get_scg_rhc_segments(scg_channels, segment_size)
@@ -213,55 +193,30 @@ if __name__ == '__main__':
     pickle.dump(test_loader, f)
 
   generator = AttentionUNetGenerator(in_channels, out_channels)
-  discriminator = PatchGANDiscriminator(in_channels, out_channels, n_filters=64)
-  optimizer_G = optim.Adam(generator.parameters(), lr=alpha, betas=(beta1, beta2))
-  optimizer_D = optim.Adam(discriminator.parameters(), lr=alpha, betas=(beta1, beta2))
+  g_optimizer = optim.Adam(generator.parameters(), lr=alpha, betas=(0.5, 0.999))
 
   device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
   generator = generator.to(device)
-  discriminator = discriminator.to(device)
+  criterion = criterion.to(device)
 
   g_losses = []
-  d_losses = []
-
-  g_loss_total = 0
-  d_loss_total = 0
 
   for epoch in range(total_epochs):
-    for i, (scg, rhc) in enumerate(train_loader):
+    for i, (scg, rhc) in enumerate(train_loader, start=1):
       scg = scg.to(device)
       rhc = rhc.to(device)
 
-      optimizer_G.zero_grad()
-      optimizer_D.zero_grad()
-      
-      fake_rhc = generator(scg)
-      fake_rhc_validity = discriminator(torch.cat((scg, fake_rhc.detach()), dim=1))
-      real_rhc_validity = discriminator(torch.cat((scg, rhc), dim=1))
-      d_loss = -torch.mean(real_rhc_validity) + torch.mean(fake_rhc_validity)
-      gp = compute_gp(discriminator, scg, rhc, fake_rhc)
-      d_loss += lambda_gp * gp
-      d_losses.append(d_loss.item())
-      d_loss_total += d_loss
-      d_loss.backward()
-      optimizer_D.step()
-      
-      if True:
-        fake_rhc = generator(scg)
-        fake_rhc_validity = discriminator(torch.cat((scg, fake_rhc), dim=1))
-        g_loss = -torch.mean(fake_rhc_validity)
-        g_losses.append(g_loss.item())
-        g_loss_total += g_loss
-        g_loss.backward()
-        optimizer_G.step()
-      
+      pred_rhc = generator(scg)
+      g_loss = criterion(rhc, pred_rhc)
+      g_losses.append(g_loss.item())
+      g_loss.backward()
+      g_optimizer.step()
+
       if i % 100 == 0 or i == len(train_loader) - 1:
         print(f'Epoch {epoch+1}/{total_epochs} | Batch {i+1}/{len(train_loader)}')
-        plt.plot(g_losses, label='Generator loss')
-        plt.plot(d_losses, label='Discriminator loss')
+        plt.plot(g_losses, label='Loss')
         plt.xlabel('Iteration')
         plt.ylabel('Loss')
-        plt.gca().set_xlim([0, 10])
         plt.legend()
         plt.savefig('waveform_losses.png')
         plt.close()
@@ -272,8 +227,7 @@ if __name__ == '__main__':
       'in_channels': in_channels,
       'out_channels': out_channels,
       'segment_size': segment_size,
-      'generator_state_dict': generator.state_dict(),
-      'discriminator_state_dict': discriminator.state_dict()
+      'generator_state_dict': generator.state_dict()
     }
     torch.save(checkpoint, 'waveform_checkpoint.pth')
 

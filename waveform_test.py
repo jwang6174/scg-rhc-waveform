@@ -17,14 +17,14 @@ generator = AttentionUNetGenerator(
 generator.load_state_dict(checkpoint['generator_state_dict'])
 generator.eval()
 
-for i, (scg, real_rhc) in enumerate(test_loader):
+for i, (scg, real_rhc) in enumerate(test_loader, start=1):
   pred_rhc = generator(scg)[0, 0, :]
   plt.plot(pred_rhc.detach().numpy(), label='Pred RHC')
   plt.plot(real_rhc[0, 0, :], label='Real RHC')
   plt.xlabel('Sample')
   plt.ylabel('mmHg')
   plt.legend()
-  plt.savefig(f'waveform_test_plot_{i+1}.png')
+  plt.savefig(f'waveform_test_plot_{i}.png')
   plt.close()
-  if i == 9:
+  if i == 3:
     break
