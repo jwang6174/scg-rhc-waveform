@@ -3,6 +3,7 @@ import numpy as np
 import pickle
 from sklearn.model_selection import train_test_split
 import torch
+import torch.autograd as autograd
 import torch.nn as nn
 import torch.nn.functional as F
 import torch.optim as optim
@@ -166,18 +167,42 @@ class SCGDataset(Dataset):
     rhc = self.pad(self.invert(self.minmax_norm(segments[1])))
     return scg, rhc
 
+def compute_gp(discriminator, scg, real_rhc, fake_rhc):
+  batch_size = real_rhc.size(0)
+  eps = torch.rand(batch_size, 1, 1).to(real_rhc.device)
+  eps = eps.expand_as(real_rhc)
+  interpolation = (eps * real_rhc) + ((1 - eps) * fake_rhc)
+  interp_logits = discriminator(torch.cat((scg, interpolation), dim=1))
+  grad_outputs = torch.ones_like(interp_logits)
+  gradients = autograd.grad(
+    outputs=interp_logits,
+    inputs=interpolation,
+    grad_outputs=grad_outputs,
+    create_graph=True,
+    retain_graph=True
+  )[0]
+  gradients = gradients.view(batch_size, -1)
+  gradient_penalty = ((gradients.norm(2, dim=1) - 1) ** 2).mean()
+  return gradient_penalty
+
 if __name__ == '__main__':
   scg_channels = ['patch_ACC_lat', 'patch_ACC_hf']
   in_channels = len(scg_channels)
   out_channels = 1
   segment_size = 750
   total_epochs = 50
-  criterion_loss = nn.MSELoss()
+  alpha = 0.00005
+  batch_size = 16
+  beta1 = 0.5
+  beta2 = 0.999
+  n_critic = 5
+  lambda_gp = 10
+  criterion = nn.MSELoss()
 
   all_segments = get_scg_rhc_segments(scg_channels, segment_size)
   train_segments, test_segments = train_test_split(all_segments, train_size=0.9)
   train_set = SCGDataset(train_segments, segment_size)
-  train_loader = DataLoader(train_set, batch_size=32, shuffle=True)
+  train_loader = DataLoader(train_set, batch_size=batch_size, shuffle=True)
   test_set = SCGDataset(test_segments, segment_size)
   test_loader = DataLoader(test_set, batch_size=1, shuffle=True)
 
@@ -189,16 +214,12 @@ if __name__ == '__main__':
 
   generator = AttentionUNetGenerator(in_channels, out_channels)
   discriminator = PatchGANDiscriminator(in_channels, out_channels, n_filters=64)
-  optimizer_G = optim.Adam(generator.parameters(), lr=0.0001, betas=(0.5, 0.999))
-  optimizer_D = optim.Adam(discriminator.parameters(), lr=0.0001, betas=(0.5, 0.999))
+  optimizer_G = optim.Adam(generator.parameters(), lr=alpha, betas=(beta1, beta2))
+  optimizer_D = optim.Adam(discriminator.parameters(), lr=alpha, betas=(beta1, beta2))
 
   device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
   generator = generator.to(device)
   discriminator = discriminator.to(device)
-  criterion_loss = criterion_loss.to(device)
-
-  nn.utils.clip_grad_norm_(generator.parameters(), 1)
-  nn.utils.clip_grad_norm_(discriminator.parameters(), 1)
 
   g_losses = []
   d_losses = []
@@ -213,34 +234,34 @@ if __name__ == '__main__':
 
       optimizer_G.zero_grad()
       optimizer_D.zero_grad()
-
-      fake_rhc = generator(scg)
-      fake_rhc_validity = discriminator(torch.cat((scg, fake_rhc), dim=1))
-      g_loss = criterion_loss(fake_rhc, rhc)
-      g_losses.append(g_loss.item())
-      g_loss_total += g_loss
-      g_loss.backward()
-      optimizer_G.step()
       
       fake_rhc = generator(scg)
       fake_rhc_validity = discriminator(torch.cat((scg, fake_rhc.detach()), dim=1))
       real_rhc_validity = discriminator(torch.cat((scg, rhc), dim=1))
-      fake_rhc_loss = criterion_loss(fake_rhc_validity, torch.zeros_like(fake_rhc_validity))
-      real_rhc_loss = criterion_loss(real_rhc_validity, torch.ones_like(real_rhc_validity))
-      d_loss = fake_rhc_loss + real_rhc_loss
+      d_loss = -torch.mean(real_rhc_validity) + torch.mean(fake_rhc_validity)
+      gp = compute_gp(discriminator, scg, rhc, fake_rhc)
+      d_loss += lambda_gp * gp
       d_losses.append(d_loss.item())
       d_loss_total += d_loss
       d_loss.backward()
       optimizer_D.step()
-
+      
+      if True:
+        fake_rhc = generator(scg)
+        fake_rhc_validity = discriminator(torch.cat((scg, fake_rhc), dim=1))
+        g_loss = -torch.mean(fake_rhc_validity)
+        g_losses.append(g_loss.item())
+        g_loss_total += g_loss
+        g_loss.backward()
+        optimizer_G.step()
+      
       if i % 100 == 0 or i == len(train_loader) - 1:
         print(f'Epoch {epoch+1}/{total_epochs} | Batch {i+1}/{len(train_loader)}')
-        print(f'  Total D Loss {d_loss_total}')
-        print(f'  Total G Loss {g_loss_total}')
         plt.plot(g_losses, label='Generator loss')
         plt.plot(d_losses, label='Discriminator loss')
         plt.xlabel('Iteration')
         plt.ylabel('Loss')
+        plt.gca().set_xlim([0, 10])
         plt.legend()
         plt.savefig('waveform_losses.png')
         plt.close()
