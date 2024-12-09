@@ -210,3 +210,6 @@ GitHub.sublime-settings
 
 waveform_results/
 *.out
+*.png
+*.pickle
+*.pth
