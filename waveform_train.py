@@ -380,7 +380,8 @@ if __name__ == "__main__":
         pred_rhc = generator(scg)
         pred_validity = discriminator(torch.cat((scg, pred_rhc), dim=1)) 
         real_validity = discriminator(torch.cat((scg, rhc), dim=1))
-        d_loss = -torch.mean(real_validity) + torch.mean(pred_validity) + compute_gp(discriminator, scg, rhc, pred_rhc, lambda_gp)
+        gp = compute_gp(discriminator, scg, rhc, pred_rhc, lambda_gp)
+        d_loss = -torch.mean(real_validity) + torch.mean(pred_validity) + gp
         d_losses.append(d_loss.item())
         d_optimizer.zero_grad()
         d_loss.backward()
@@ -408,12 +409,10 @@ if __name__ == "__main__":
         plt.legend()
         plt.savefig('waveform_losses.png')
         plt.close()
-
+      
     checkpoint = {
       'epoch': epoch,
       'scg_channels': scg_channels,
-      'in_channels': in_channels,
-      'out_channels': out_channels,
       'segment_size': segment_size,
       'generator_state_dict': generator.state_dict(),
       'discriminator_state_dict': discriminator.state_dict()
