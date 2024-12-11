@@ -5,15 +5,13 @@ import torch
 import matplotlib.pyplot as plt
 from torch.utils.data import DataLoader
 
-from waveform_train import AttentionUNetGenerator, SCGDataset
+from waveform_train import Generator, SCGDataset
 
 with open('waveform_loader_test.pickle', 'rb') as f:
   test_loader = pickle.load(f)
 
 checkpoint = torch.load('waveform_checkpoint.pth', weights_only=False)
-generator = AttentionUNetGenerator(
-  in_channels=checkpoint['in_channels'], 
-  out_channels=checkpoint['out_channels'])
+generator = Generator(checkpoint['in_channels'])
 generator.load_state_dict(checkpoint['generator_state_dict'])
 generator.eval()
 
