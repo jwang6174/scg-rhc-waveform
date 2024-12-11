@@ -2,6 +2,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 import os
 import pickle
+import torch
 import wfdb
 from pathlib import Path
 from pathutil import PROCESSED_DATA_PATH
@@ -110,7 +111,7 @@ def get_segments(scg_channels, size, record=None):
         segments.append((scg_segment, rhc_segment))
       return segments
     except ValueError:
-      return []  
+      return []
 
 
 def save_dataloaders(scg_channels, segment_size, batch_size, train_path, test_path):

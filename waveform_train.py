@@ -1,12 +1,12 @@
 import matplotlib.pyplot as plt
 import numpy as np
 import pickle
-import recordutil
 import torch
 import torch.autograd as autograd
 import torch.nn as nn
 import torch.nn.functional as F
 import torch.optim as optim
+from recordutil import load_dataloader, SCGDataset
 
 class AttentionBlock(nn.Module):
   """
@@ -34,19 +34,19 @@ class AttentionBlock(nn.Module):
   computationally expensive, additive attention has experimentally demonstrated
   higher accuracy than multiplicative attention.
   """
-  def __init__(self, F_x, F_g):
+  def __init__(self, F_x, F_g, F_int):
     super(AttentionBlock, self).__init__() 
 
     self.W_x = nn.Sequential(
-      nn.Conv1d(F_x, F_x, kernel_size=1, stride=1, padding=0, bias=True),
+      nn.Conv1d(F_x, F_int, kernel_size=1, stride=1, padding=0, bias=True),
       nn.InstanceNorm1d(F_x))
 
     self.W_g = nn.Sequential(
-      nn.Conv1d(F_g, F_x, kernel_size=1, stride=1, padding=0, bias=True),
+      nn.Conv1d(F_g, F_int, kernel_size=1, stride=1, padding=0, bias=True),
       nn.InstanceNorm1d(F_x))
 
     self.psi = nn.Sequential(
-      nn.Conv1d(F_x, 1, kernel_size=1, stride=1, padding=0, bias=True),
+      nn.Conv1d(F_int, 1, kernel_size=1, stride=1, padding=0, bias=True),
       nn.InstanceNorm1d(1),
       nn.Sigmoid())
 
@@ -102,13 +102,13 @@ class Generator(nn.Module):
     self.dec3 = self.conv_block(512, 256)
     self.dec2 = self.conv_block(256, 128)
     self.dec1 = self.conv_block(128, 64)
-    self.att3 = AttentionBlock(256, 256)
-    self.att2 = AttentionBlock(128, 128)
-    self.att1 = AttentionBlock(64, 64)
+    self.att3 = AttentionBlock(256, 256, 128)
+    self.att2 = AttentionBlock(128, 128, 64)
+    self.att1 = AttentionBlock(64, 64, 32)
     self.up3 = self.upsample(512, 256)
     self.up2 = self.upsample(256, 128)
     self.up1 = self.upsample(128, 64)
-    self.final = nn.Conv1d(64, 1, kernel_size=3, stride=1, padding=1, bias=True)
+    self.final = nn.Conv1d(64, 1, kernel_size=1)
     self.dropout = nn.Dropout(0.3)
 
   def conv_block(self, in_channels, out_channels):
@@ -185,7 +185,9 @@ class Generator(nn.Module):
     a1 = self.att1(d1, e1)
     d1 = self.dec1(torch.cat((d1, a1), dim=1))
 
-    return self.final(d1)
+    f = self.final(d1)
+    f = self.pad_size(f, x)
+    return f
 
 
 class Discriminator(nn.Module):
@@ -279,7 +281,7 @@ def compute_gp(discriminator, scg, real_rhc, pred_rhc, lambda_gp):
   return lambda_gp * gp
       
 if __name__ == "__main__":
-  train_loader = recordutil.load_dataloader('waveform_loader_train.pickle')
+  train_loader = load_dataloader('waveform_loader_train.pickle')
 
   in_channels = 2
   segment_size = 750
@@ -288,7 +290,7 @@ if __name__ == "__main__":
   beta1 = 0.5
   beta2 = 0.999
   n_critic = 2
-  total_epochs = 50
+  total_epochs = 100
   lambda_gp = 10
 
   generator = Generator(in_channels)
@@ -327,7 +329,7 @@ if __name__ == "__main__":
 
       pred_rhc = generator(scg)
       pred_validity = discriminator(torch.cat((scg, rhc), dim=1))
-      g_loss = -torch.mean(pred_validity) + criterion_loss(pred_rhc, rhc)
+      g_loss = -torch.mean(pred_validity) + 100 * criterion_loss(pred_rhc, rhc)
       g_losses.append(g_loss.item())
       g_optimizer.zero_grad()
       g_loss.backward()
