@@ -1,14 +1,12 @@
 import matplotlib.pyplot as plt
 import numpy as np
 import pickle
+import recordutil
 import torch
 import torch.autograd as autograd
 import torch.nn as nn
 import torch.nn.functional as F
 import torch.optim as optim
-from recordutil import get_scg_rhc_segments
-from sklearn.model_selection import train_test_split
-from torch.utils.data import Dataset, DataLoader
 
 class AttentionBlock(nn.Module):
   """
@@ -238,55 +236,7 @@ class Discriminator(nn.Module):
     )
    
   def forward(self, x):
-    return self.model(x)
-
- 
-class SCGDataset(Dataset):
-  """
-  Container dataset class SCG and RHC segments.
-  """
-  def __init__(self, segments, segment_size):
-    self.segments = segments
-    self.segment_size = segment_size
-
-  def pad(self, tensor):
-    """
-    Add padding to segment to match specified size.
-    """
-    if tensor.shape[-1] < self.segment_size:
-        padding = self.segment_size - tensor.shape[-1]
-        tensor = torch.nn.functional.pad(tensor, (0, padding))
-    elif tensor.shape[-1] > self.segment_size:
-        tensor = tensor[:, :, :self.segment_size]
-    return tensor
-
-  def minmax_norm(self, tensor):
-    """
-    Perform min-max normalization on tensor.
-    """
-    tensor = (tensor - np.min(tensor)) / (np.max(tensor) - np.min(tensor) + 0.0001)
-    return tensor
-
-  def invert(self, tensor):
-    """
-    Invert a tensor.
-    """
-    return torch.tensor(tensor.T, dtype=torch.float32)
-
-  def __len__(self):
-    """
-    Get number of segments.
-    """
-    return len(self.segments)
-
-  def __getitem__(self, index):
-    """
-    Iterate through segments.
-    """
-    segments = self.segments[index]
-    scg = self.pad(self.invert(self.minmax_norm(segments[0])))
-    rhc = self.pad(self.invert(self.minmax_norm(segments[1])))
-    return scg, rhc
+    return self.model(x) 
 
 
 def compute_gp(discriminator, scg, real_rhc, pred_rhc, lambda_gp):
@@ -329,29 +279,17 @@ def compute_gp(discriminator, scg, real_rhc, pred_rhc, lambda_gp):
   return lambda_gp * gp
       
 if __name__ == "__main__":
-  scg_channels = ['patch_ACC_lat', 'patch_ACC_hf']
-  in_channels = len(scg_channels)
+  train_loader = recordutil.load_dataloader('waveform_loader_train.pickle')
+
+  in_channels = 2
   segment_size = 750
   batch_size = 4
-  alpha = 0.00005
+  alpha = 0.0001
   beta1 = 0.5
   beta2 = 0.999
   n_critic = 2
   total_epochs = 50
   lambda_gp = 10
-
-  all_segments = get_scg_rhc_segments(scg_channels, segment_size)
-  train_segments, test_segments = train_test_split(all_segments, train_size=0.9)
-  train_set = SCGDataset(train_segments, segment_size)
-  train_loader = DataLoader(train_set, batch_size=batch_size, shuffle=True)
-  test_set = SCGDataset(test_segments, segment_size)
-  test_loader = DataLoader(test_set, batch_size=1, shuffle=True)
-
-  with open('waveform_loader_test.pickle', 'wb') as f:
-    pickle.dump(train_loader, f)
-
-  with open('waveform_loader_train.pickle', 'wb') as f:
-    pickle.dump(test_loader, f)
 
   generator = Generator(in_channels)
   discriminator = Discriminator(in_channels)
@@ -389,7 +327,7 @@ if __name__ == "__main__":
 
       pred_rhc = generator(scg)
       pred_validity = discriminator(torch.cat((scg, rhc), dim=1))
-      g_loss = -torch.mean(pred_validity) + (100 * criterion_loss(pred_rhc, rhc))
+      g_loss = -torch.mean(pred_validity) + criterion_loss(pred_rhc, rhc)
       g_losses.append(g_loss.item())
       g_optimizer.zero_grad()
       g_loss.backward()
@@ -412,7 +350,7 @@ if __name__ == "__main__":
       
     checkpoint = {
       'epoch': epoch,
-      'scg_channels': scg_channels,
+      'in_channels': in_channels,
       'segment_size': segment_size,
       'generator_state_dict': generator.state_dict(),
       'discriminator_state_dict': discriminator.state_dict()
