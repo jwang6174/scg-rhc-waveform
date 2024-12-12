@@ -290,7 +290,7 @@ if __name__ == "__main__":
   beta1 = 0.5
   beta2 = 0.999
   n_critic = 2
-  total_epochs = 100
+  total_epochs = 500
   lambda_gp = 10
 
   generator = Generator(in_channels)
