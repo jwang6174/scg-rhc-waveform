@@ -59,6 +59,6 @@ def is_straight_line(waveform):
 def has_noise(waveform):
   return (
     len(get_flat_lines(waveform)) > 0 or
-    len(get_vertical_lines(waveform)) > 0 or
+    # len(get_vertical_lines(waveform)) > 0 or
     is_straight_line(waveform)
   )
