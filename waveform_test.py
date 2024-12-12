@@ -4,7 +4,6 @@ import pickle
 import torch
 import matplotlib.pyplot as plt
 from torch.utils.data import DataLoader
-
 from waveform_train import Generator, SCGDataset
 
 with open('waveform_loader_test.pickle', 'rb') as f:
@@ -16,9 +15,10 @@ generator.load_state_dict(checkpoint['generator_state_dict'])
 generator.eval()
 
 for i, (scg, real_rhc) in enumerate(test_loader, start=1):
-  pred_rhc = generator(scg)[0, 0, :]
-  plt.plot(pred_rhc.detach().numpy(), label='Pred RHC')
-  plt.plot(real_rhc[0, 0, :], label='Real RHC')
+  real_rhc = real_rhc.detach().numpy()[0, 0, :]
+  pred_rhc = generator(scg).detach().numpy()[0, 0, :]
+  plt.plot(pred_rhc, label='Pred RHC')
+  plt.plot(real_rhc, label='Real RHC')
   plt.xlabel('Sample')
   plt.ylabel('mmHg')
   plt.legend()
