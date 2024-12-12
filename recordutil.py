@@ -8,6 +8,7 @@ from pathlib import Path
 from pathutil import PROCESSED_DATA_PATH
 from sklearn.model_selection import train_test_split
 from torch.utils.data import Dataset, DataLoader
+from waveform_noise import has_noise
 
 class SCGDataset(Dataset):
   """
@@ -108,7 +109,8 @@ def get_segments(scg_channels, size, record=None):
         stop_idx = start_idx + size
         scg_segment = scg_signal[start_idx:stop_idx]
         rhc_segment = rhc_signal[start_idx:stop_idx]
-        segments.append((scg_segment, rhc_segment))
+        if not has_noise(rhc_segment[:, 0]):
+          segments.append((scg_segment, rhc_segment))
       return segments
     except ValueError:
       return []
