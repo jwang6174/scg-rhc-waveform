@@ -11,7 +11,7 @@ with open('waveform_loader_test.pickle', 'rb') as f:
 
 checkpoint = torch.load('waveform_checkpoint.pth', weights_only=False)
 generator = Generator(checkpoint['in_channels'])
-generator.load_state_dict(checkpoint['generator_state_dict'])
+generator.load_state_dict(checkpoint['g_state_dict'])
 generator.eval()
 
 for i, (scg, real_rhc) in enumerate(test_loader, start=1):
