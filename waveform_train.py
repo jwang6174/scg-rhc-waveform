@@ -280,38 +280,61 @@ def compute_gp(discriminator, scg, real_rhc, pred_rhc, lambda_gp):
 
   return lambda_gp * gp
       
-if __name__ == "__main__":
+def run(checkpoint_path=None):
+  total_epochs = 1000
   train_loader = load_dataloader('waveform_loader_train.pickle')
 
-  in_channels = 2
-  segment_size = 750
-  batch_size = 4
-  alpha = 0.0001
-  beta1 = 0.5
-  beta2 = 0.999
-  n_critic = 2
-  total_epochs = 500
-  lambda_gp = 10
-
+  if checkpoint_path:
+    checkpoint = torch.load(checkpoint_path)
+    epoch = checkpoint['epoch'] + 1
+    in_channels = checkpoint['in_channels']
+    segment_size = checkpoint['segment_size']
+    batch_size = checkpoint['batch_size']
+    alpha = checkpoint['alpha']
+    beta1 = checkpoint['beta1']
+    beta2 = checkpoint['beta2']
+    n_critic = checkpoint['n_critic']
+    lambda_gp = checkpoint['lambda_gp']
+    lambda_c = checkpoint['lambda_c']
+    g_losses = checkpoint['g_losses']
+    d_losses = checkpoint['d_losses']
+  else:
+    checkpoint = None
+    epoch = 0
+    in_channels = 2
+    segment_size = 750
+    batch_size = 4
+    alpha = 0.0001
+    beta1 = 0.5
+    beta2 = 0.999
+    n_critic = 2
+    total_epochs = 500
+    lambda_gp = 10
+    lambda_c = 1000
+    g_losses = []
+    d_losses = []
+  
   generator = Generator(in_channels)
   discriminator = Discriminator(in_channels)
-  criterion_loss = nn.MSELoss()
-  
   g_optimizer = optim.Adam(generator.parameters(), lr=alpha, betas=(beta1, beta2))
   d_optimizer = optim.Adam(discriminator.parameters(), lr=alpha, betas=(beta1, beta2))
+
+  if checkpoint:
+    generator.load_state_dict(checkpoint['g_state_dict'])
+    discriminator.load_state_dict(checkpoint['d_state_dict'])
+    g_optimizer.load_state_dict(checkpoint['g_optimizer_state_dict'])
+    d_optimizer.load_state_dict(checkpoint['d_optimizer_state_dict'])
+
+  criterion_loss = nn.MSELoss()
+  g_loss_total = sum(g_losses)
+  d_loss_total = sum(d_losses)
 
   device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
   generator = generator.to(device)
   discriminator = discriminator.to(device)
   criterion_loss = criterion_loss.to(device)
 
-  g_losses = []
-  d_losses = []
-
-  g_loss_total = 0
-  d_loss_total = 0
-
-  for epoch in range(total_epochs):
+  while epoch < total_epochs:
     for i, (scg, rhc) in enumerate(train_loader):
       scg = scg.to(device)
       rhc = rhc.to(device)
@@ -329,7 +352,7 @@ if __name__ == "__main__":
 
       pred_rhc = generator(scg)
       pred_validity = discriminator(torch.cat((scg, rhc), dim=1))
-      g_loss = -torch.mean(pred_validity) + 100 * criterion_loss(pred_rhc, rhc)
+      g_loss = -torch.mean(pred_validity) + lambda_c * criterion_loss(pred_rhc, rhc)
       g_losses.append(g_loss.item())
       g_optimizer.zero_grad()
       g_loss.backward()
@@ -337,15 +360,15 @@ if __name__ == "__main__":
 
       if i % 100 == 0 or i == len(train_loader) - 1:
         print(f'Epoch {epoch+1}/{total_epochs} | Batch {i+1}/{len(train_loader)}')
-        print(f'   G Loss Diff: {sum(g_losses) - g_loss_total}')
-        print(f'   D Loss Diff: {sum(d_losses) - d_loss_total}')
+        print(f'  G Loss Diff: {sum(g_losses) - g_loss_total}')
+        print(f'  D Loss Diff: {sum(d_losses) - d_loss_total}')
         g_loss_total = sum(g_losses)
         d_loss_total = sum(d_losses)
-        plt.plot(g_losses, label='Generator loss')
-        plt.plot(d_losses, label='Discriminator loss')
+        plt.plot(g_losses, label='Generator Loss')
+        plt.plot(d_losses, label='Discriminator Loss')
         plt.xlabel('Iteration')
         plt.ylabel('Loss')
-        plt.ylim(0, 100)
+        plt.ylim(0, 50)
         plt.legend()
         plt.savefig('waveform_losses.png')
         plt.close()
@@ -354,8 +377,23 @@ if __name__ == "__main__":
       'epoch': epoch,
       'in_channels': in_channels,
       'segment_size': segment_size,
-      'generator_state_dict': generator.state_dict(),
-      'discriminator_state_dict': discriminator.state_dict()
+      'batch_size': batch_size,
+      'alpha': alpha,
+      'beta1': beta1,
+      'beta2': beta2,
+      'n_critic': n_critic,
+      'lambda_gp': lambda_gp,
+      'lambda_c': lambda_c,
+      'g_losses': g_losses,
+      'd_losses': d_losses,
+      'g_state_dict': generator.state_dict(),
+      'd_state_dict': discriminator.state_dict(),
+      'g_optimizer_state_dict': g_optimizer.state_dict(),
+      'd_optimizer_state_dict': d_optimizer.state_dict(),
     }
     torch.save(checkpoint, 'waveform_checkpoint.pth')
 
+    epoch += 1
+
+if __name__ == '__main__':
+  run()
