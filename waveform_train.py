@@ -284,7 +284,7 @@ def run(checkpoint_path=None):
   total_epochs = 1000
   train_loader = load_dataloader('waveform_loader_train.pickle')
 
-  if checkpoint_path:
+  if checkpoint_path is not None:
     checkpoint = torch.load(checkpoint_path)
     epoch = checkpoint['epoch'] + 1
     in_channels = checkpoint['in_channels']
@@ -303,14 +303,14 @@ def run(checkpoint_path=None):
     epoch = 0
     in_channels = 2
     segment_size = 750
-    batch_size = 4
+    batch_size = 64
     alpha = 0.0001
     beta1 = 0.5
     beta2 = 0.999
     n_critic = 2
     total_epochs = 500
     lambda_gp = 10
-    lambda_c = 1000
+    lambda_c = 100
     g_losses = []
     d_losses = []
   
@@ -319,7 +319,7 @@ def run(checkpoint_path=None):
   g_optimizer = optim.Adam(generator.parameters(), lr=alpha, betas=(beta1, beta2))
   d_optimizer = optim.Adam(discriminator.parameters(), lr=alpha, betas=(beta1, beta2))
 
-  if checkpoint:
+  if checkpoint is not None:
     generator.load_state_dict(checkpoint['g_state_dict'])
     discriminator.load_state_dict(checkpoint['d_state_dict'])
     g_optimizer.load_state_dict(checkpoint['g_optimizer_state_dict'])
