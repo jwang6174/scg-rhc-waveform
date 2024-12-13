@@ -285,7 +285,7 @@ def run(checkpoint_path=None):
   train_loader = load_dataloader('waveform_loader_train.pickle')
 
   if checkpoint_path is not None:
-    checkpoint = torch.load(checkpoint_path)
+    checkpoint = torch.load(checkpoint_path, weights_only=False)
     epoch = checkpoint['epoch'] + 1
     in_channels = checkpoint['in_channels']
     segment_size = checkpoint['segment_size']
@@ -318,6 +318,12 @@ def run(checkpoint_path=None):
   discriminator = Discriminator(in_channels)
   g_optimizer = optim.Adam(generator.parameters(), lr=alpha, betas=(beta1, beta2))
   d_optimizer = optim.Adam(discriminator.parameters(), lr=alpha, betas=(beta1, beta2))
+  criterion_loss = nn.MSELoss()
+
+  device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+  generator = generator.to(device)
+  discriminator = discriminator.to(device)
+  criterion_loss = criterion_loss.to(device)
 
   if checkpoint is not None:
     generator.load_state_dict(checkpoint['g_state_dict'])
@@ -325,14 +331,8 @@ def run(checkpoint_path=None):
     g_optimizer.load_state_dict(checkpoint['g_optimizer_state_dict'])
     d_optimizer.load_state_dict(checkpoint['d_optimizer_state_dict'])
 
-  criterion_loss = nn.MSELoss()
   g_loss_total = sum(g_losses)
   d_loss_total = sum(d_losses)
-
-  device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-  generator = generator.to(device)
-  discriminator = discriminator.to(device)
-  criterion_loss = criterion_loss.to(device)
 
   while epoch < total_epochs:
     for i, (scg, rhc) in enumerate(train_loader):
