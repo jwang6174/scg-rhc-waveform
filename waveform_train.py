@@ -39,11 +39,11 @@ class AttentionBlock(nn.Module):
 
     self.W_x = nn.Sequential(
       nn.Conv1d(F_x, F_int, kernel_size=1, stride=1, padding=0, bias=True),
-      nn.InstanceNorm1d(F_x))
+      nn.InstanceNorm1d(F_int))
 
     self.W_g = nn.Sequential(
       nn.Conv1d(F_g, F_int, kernel_size=1, stride=1, padding=0, bias=True),
-      nn.InstanceNorm1d(F_x))
+      nn.InstanceNorm1d(F_int))
 
     self.psi = nn.Sequential(
       nn.Conv1d(F_int, 1, kernel_size=1, stride=1, padding=0, bias=True),
