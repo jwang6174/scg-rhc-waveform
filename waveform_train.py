@@ -335,7 +335,7 @@ def run(checkpoint_path=None):
   d_loss_total = sum(d_losses)
 
   while epoch < total_epochs:
-    for i, (scg, rhc) in enumerate(train_loader):
+    for i, (scg, rhc, filename) in enumerate(train_loader):
       scg = scg.to(device)
       rhc = rhc.to(device)
       

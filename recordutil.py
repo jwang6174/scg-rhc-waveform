@@ -52,10 +52,11 @@ class SCGDataset(Dataset):
     """
     Iterate through segments.
     """
-    segments = self.segments[index]
-    scg = self.pad(self.invert(self.minmax_norm(segments[0])))
-    rhc = self.pad(self.invert(self.minmax_norm(segments[1])))
-    return scg, rhc
+    segment = self.segments[index]
+    scg = self.pad(self.invert(self.minmax_norm(segment[0])))
+    rhc = self.pad(self.invert(self.minmax_norm(segment[1])))
+    filename = segment[2]
+    return scg, rhc, filename
 
 
 def get_record_names(dirname):
@@ -74,9 +75,9 @@ def get_records(dirname):
   Get WFDB record objects in a given directory.
   """
   records = []
-  for record_name in get_record_names(dirname):
-    record = wfdb.rdrecord(os.path.join(dirname, record_name))
-    records.append(record)
+  for filename in get_record_names(dirname):
+    record_obj = wfdb.rdrecord(os.path.join(dirname, filename))
+    records.append((filename, record_obj))
   return records
 
 
@@ -101,16 +102,18 @@ def get_segments(scg_channels, size, record=None):
   else:
     try:
       segments = []
-      scg_signal = get_channels(record, scg_channels)
-      rhc_signal = get_channels(record, ['RHC_pressure'])
-      num_segments = record.p_signal.shape[0] // size
+      filename = record[1]
+      record_obj = record[2]
+      scg_signal = get_channels(record_obj, scg_channels)
+      rhc_signal = get_channels(record_obj, ['RHC_pressure'])
+      num_segments = record_obj.p_signal.shape[0] // size
       for i in range(num_segments):
         start_idx = i * size
         stop_idx = start_idx + size
         scg_segment = scg_signal[start_idx:stop_idx]
         rhc_segment = rhc_signal[start_idx:stop_idx]
         if not has_noise(rhc_segment[:, 0]):
-          segments.append((scg_segment, rhc_segment))
+          segments.append((scg_segment, rhc_segment, filename))
       return segments
     except ValueError:
       return []
