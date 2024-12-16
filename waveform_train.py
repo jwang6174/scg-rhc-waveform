@@ -283,6 +283,11 @@ def compute_gp(discriminator, scg, real_rhc, pred_rhc, lambda_gp):
   return lambda_gp * gp
       
 def run(checkpoint_path=None):
+  
+  if checkpoint_path is not None:
+    print(timelog('Resuming waveform training', time()))
+  else:
+    print(timelog('Starting waveform training', time()))
 
   total_epochs = 1000
   train_loader = load_dataloader('waveform_loader_train.pickle')
