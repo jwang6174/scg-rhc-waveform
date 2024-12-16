@@ -7,6 +7,8 @@ import torch.nn as nn
 import torch.nn.functional as F
 import torch.optim as optim
 from recordutil import load_dataloader, SCGDataset
+from time import time
+from timelog import timelog
 
 class AttentionBlock(nn.Module):
   """
@@ -281,11 +283,13 @@ def compute_gp(discriminator, scg, real_rhc, pred_rhc, lambda_gp):
   return lambda_gp * gp
       
 def run(checkpoint_path=None):
+
   total_epochs = 1000
   train_loader = load_dataloader('waveform_loader_train.pickle')
 
   if checkpoint_path is not None:
     checkpoint = torch.load(checkpoint_path, weights_only=False)
+    start_time = checkpoint['start_time']
     epoch = checkpoint['epoch'] + 1
     in_channels = checkpoint['in_channels']
     segment_size = checkpoint['segment_size']
@@ -300,6 +304,7 @@ def run(checkpoint_path=None):
     d_losses = checkpoint['d_losses']
   else:
     checkpoint = None
+    start_time = time()
     epoch = 0
     in_channels = 2
     segment_size = 750
@@ -335,7 +340,7 @@ def run(checkpoint_path=None):
   d_loss_total = sum(d_losses)
 
   while epoch < total_epochs:
-    for i, (scg, rhc, filename) in enumerate(train_loader):
+    for i, (scg, rhc, filename, start_idx, stop_idx) in enumerate(train_loader):
       scg = scg.to(device)
       rhc = rhc.to(device)
       
@@ -358,8 +363,8 @@ def run(checkpoint_path=None):
       g_loss.backward()
       g_optimizer.step()
 
-      if i % 100 == 0 or i == len(train_loader) - 1:
-        print(f'Epoch {epoch+1}/{total_epochs} | Batch {i+1}/{len(train_loader)}')
+      if i > 0 and (i % 100 == 0 or i == len(train_loader) - 1):
+        print(timelog(f'Epoch {epoch + 1}/{total_epochs} | Batch {i}/{len(train_loader)}', start_time))
         print(f'  G Loss Diff: {sum(g_losses) - g_loss_total}')
         print(f'  D Loss Diff: {sum(d_losses) - d_loss_total}')
         g_loss_total = sum(g_losses)
@@ -374,6 +379,7 @@ def run(checkpoint_path=None):
         plt.close()
       
     checkpoint = {
+      'start_time': start_time,
       'epoch': epoch,
       'in_channels': in_channels,
       'segment_size': segment_size,

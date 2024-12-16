@@ -56,7 +56,9 @@ class SCGDataset(Dataset):
     scg = self.pad(self.invert(self.minmax_norm(segment[0])))
     rhc = self.pad(self.invert(self.minmax_norm(segment[1])))
     filename = segment[2]
-    return scg, rhc, filename
+    start_idx = segment[3]
+    stop_idx = segment[4]
+    return scg, rhc, filename, start_idx, stop_idx
 
 
 def get_record_names(dirname):
@@ -102,8 +104,8 @@ def get_segments(scg_channels, size, record=None):
   else:
     try:
       segments = []
-      filename = record[1]
-      record_obj = record[2]
+      filename = record[0]
+      record_obj = record[1]
       scg_signal = get_channels(record_obj, scg_channels)
       rhc_signal = get_channels(record_obj, ['RHC_pressure'])
       num_segments = record_obj.p_signal.shape[0] // size
@@ -113,7 +115,7 @@ def get_segments(scg_channels, size, record=None):
         scg_segment = scg_signal[start_idx:stop_idx]
         rhc_segment = rhc_signal[start_idx:stop_idx]
         if not has_noise(rhc_segment[:, 0]):
-          segments.append((scg_segment, rhc_segment, filename))
+          segments.append((scg_segment, rhc_segment, filename, start_idx, stop_idx))
       return segments
     except ValueError:
       return []
