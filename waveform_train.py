@@ -296,9 +296,6 @@ def run(checkpoint_path=None):
     checkpoint = torch.load(checkpoint_path, weights_only=False)
     start_time = checkpoint['start_time']
     epoch = checkpoint['epoch'] + 1
-    in_channels = checkpoint['in_channels']
-    segment_size = checkpoint['segment_size']
-    batch_size = checkpoint['batch_size']
     alpha = checkpoint['alpha']
     beta1 = checkpoint['beta1']
     beta2 = checkpoint['beta2']
@@ -311,9 +308,6 @@ def run(checkpoint_path=None):
     checkpoint = None
     start_time = time()
     epoch = 0
-    in_channels = 2
-    segment_size = 750
-    batch_size = 128
     alpha = 0.0001
     beta1 = 0.5
     beta2 = 0.999
@@ -386,9 +380,6 @@ def run(checkpoint_path=None):
     checkpoint = {
       'start_time': start_time,
       'epoch': epoch,
-      'in_channels': in_channels,
-      'segment_size': segment_size,
-      'batch_size': batch_size,
       'alpha': alpha,
       'beta1': beta1,
       'beta2': beta2,
