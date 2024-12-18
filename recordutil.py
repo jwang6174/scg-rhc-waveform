@@ -121,21 +121,28 @@ def get_segments(scg_channels, size, record=None):
       return []
 
 
-def save_dataloaders(scg_channels, segment_size, batch_size, train_path, test_path):
+def save_dataloaders(scg_channels, segment_size, batch_size, 
+                     train_path, valid_path, test_path):
   """
   Get training and test segments, then save as torch DataLoader objects.
   """
   all_segments = get_segments(scg_channels, segment_size)
-  train_segments, test_segments = train_test_split(all_segments, train_size=0.9)
-  
+  train_segments, non_train_segments = train_test_split(all_segments, train_size=0.9)
+  valid_segments, test_segments = train_test_split(train_segments, train_size=0.5)
+
   train_set = SCGDataset(train_segments, segment_size)
-  train_loader = DataLoader(train_set, batch_size=batch_size, shuffle=True)
-  
+  valid_set = SCGDataset(valid_segments, segment_size)
   test_set = SCGDataset(test_segments, segment_size)
-  test_loader = DataLoader(test_set, batch_size=1, shuffle=True)
+
+  train_loader = DataLoader(train_set, batch_size=batch_size, shuffle=True)
+  valid_loader = DataLoader(valid_set, batch_size=1, shuffle=True)
+  test_loader = Datazloader(test_set, batch_size=1, shuffle=True)
   
   with open(train_path, 'wb') as f:
     pickle.dump(train_loader, f)
+
+  with open(valid_path, 'wb') as f:
+    pickle.dump(valid_loader, f)
   
   with open(test_path, 'wb') as f:
     pickle.dump(test_loader, f)
@@ -155,6 +162,8 @@ if __name__ == '__main__':
     segment_size=750,
     batch_size=128,
     train_path='waveform_loader_train.pickle',
-    test_path='waveform_loader_test.pickle')
+    valid_path='waveform_loader_valid.pickle',
+    test_path='waveform_loader_test.pickle'
+  )
 
 
