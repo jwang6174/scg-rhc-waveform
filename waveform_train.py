@@ -1,3 +1,4 @@
+import json
 import matplotlib.pyplot as plt
 import numpy as np
 import pickle
@@ -282,41 +283,26 @@ def compute_gp(discriminator, scg, real_rhc, pred_rhc, lambda_gp):
 
   return lambda_gp * gp
       
-def run(checkpoint_path=None):
-  
+def run(checkpoint_path):
+
   if checkpoint_path is not None:
     print(timelog('Resuming waveform training', time()))
   else:
     print(timelog('Starting waveform training', time()))
 
-  total_epochs = 1000
-  train_loader = load_dataloader('waveform_loader_train.pickle')
+  with open(waveform_params_path, 'r') as f:
+    data = json.loads(f)
+    alpha = data['alpha']
+    beta1 = data['beta1']
+    beta2 = data['beta2']
+    n_critic = data['n_critic']
+    lambda_gp = data['lambda_gp']
+    lambda_c = data['lambda_c']
+    total_epochs = data['total_epochs']
+    print(timelog('Loaded parameters'), time())
 
-  if checkpoint_path is not None:
-    checkpoint = torch.load(checkpoint_path, weights_only=False)
-    start_time = checkpoint['start_time']
-    epoch = checkpoint['epoch'] + 1
-    alpha = checkpoint['alpha']
-    beta1 = checkpoint['beta1']
-    beta2 = checkpoint['beta2']
-    n_critic = checkpoint['n_critic']
-    lambda_gp = checkpoint['lambda_gp']
-    lambda_c = checkpoint['lambda_c']
-    g_losses = checkpoint['g_losses']
-    d_losses = checkpoint['d_losses']
-  else:
-    checkpoint = None
-    start_time = time()
-    epoch = 0
-    alpha = 0.0001
-    beta1 = 0.5
-    beta2 = 0.999
-    n_critic = 2
-    total_epochs = 500
-    lambda_gp = 10
-    lambda_c = 100
-    g_losses = []
-    d_losses = []
+  train_loader = load_dataloader('waveform_loader_train.pickle')
+  print(timelog('Loaded training set'), time())
   
   generator = Generator(in_channels)
   discriminator = Discriminator(in_channels)
@@ -329,11 +315,21 @@ def run(checkpoint_path=None):
   discriminator = discriminator.to(device)
   criterion_loss = criterion_loss.to(device)
 
-  if checkpoint is not None:
+  if checkpoint_path is not None:
+    checkpoint = torch.load(checkpoint_path, weights_only=False)
+    start_time = checkpoint['start_time']
+    epoch = checkpoint['epoch'] + 1
+    g_losses = checkpoint['g_losses']
+    d_losses = checkpoint['d_losses']
     generator.load_state_dict(checkpoint['g_state_dict'])
     discriminator.load_state_dict(checkpoint['d_state_dict'])
     g_optimizer.load_state_dict(checkpoint['g_optimizer_state_dict'])
     d_optimizer.load_state_dict(checkpoint['d_optimizer_state_dict'])
+  else:
+    start_time = time()
+    epoch = 0
+    g_losses = []
+    d_losses = []
 
   g_loss_total = sum(g_losses)
   d_loss_total = sum(d_losses)
@@ -380,12 +376,6 @@ def run(checkpoint_path=None):
     checkpoint = {
       'start_time': start_time,
       'epoch': epoch,
-      'alpha': alpha,
-      'beta1': beta1,
-      'beta2': beta2,
-      'n_critic': n_critic,
-      'lambda_gp': lambda_gp,
-      'lambda_c': lambda_c,
       'g_losses': g_losses,
       'd_losses': d_losses,
       'g_state_dict': generator.state_dict(),

@@ -10,6 +10,13 @@ from sklearn.model_selection import train_test_split
 from torch.utils.data import Dataset, DataLoader
 from waveform_noise import has_noise
 
+SCG_CHANNELS = ['patch_ACC_lat', 'patch_ACC_hf']
+SEGMENT_SIZE = 750
+BATCH_SIZE = 128
+TRAIN_PATH ='waveform_loader_train.pickle'
+VALID_PATH = 'waveform_loader_valid.pickle'
+TEST_PATH = 'waveform_loader_test.pickle'
+
 class SCGDataset(Dataset):
   """
   Container dataset class SCG and RHC segments.
@@ -158,12 +165,12 @@ def load_dataloader(path):
 
 if __name__ == '__main__':
   save_dataloaders(
-    scg_channels=['patch_ACC_lat', 'patch_ACC_hf'],
-    segment_size=750,
-    batch_size=128,
-    train_path='waveform_loader_train.pickle',
-    valid_path='waveform_loader_valid.pickle',
-    test_path='waveform_loader_test.pickle'
+    SCG_CHANNELS,
+    SEGMENT_SIZE,
+    BATCH_SIZE,
+    TRAIN_PATH,
+    VALID_PATH,
+    TEST_PATH
   )
 
 
