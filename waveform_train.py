@@ -283,23 +283,23 @@ def compute_gp(discriminator, scg, real_rhc, pred_rhc, lambda_gp):
 
   return lambda_gp * gp
       
-def run(checkpoint_path):
+def run(checkpoint_path, params_path):
 
   if checkpoint_path is not None:
-    print(timelog('Resuming waveform training', time()))
+    print(timelog('Resumed waveform training', time()))
   else:
-    print(timelog('Starting waveform training', time()))
+    print(timelog('Started waveform training', time()))
 
-  with open(waveform_params_path, 'r') as f:
+  with open(params_path, 'r') as f:
     data = json.loads(f)
     alpha = data['alpha']
     beta1 = data['beta1']
     beta2 = data['beta2']
     n_critic = data['n_critic']
     lambda_gp = data['lambda_gp']
-    lambda_c = data['lambda_c']
+    lambda_aux = data['lambda_aux']
     total_epochs = data['total_epochs']
-    print(timelog('Loaded parameters'), time())
+  print(timelog('Loaded parameters'), time())
 
   train_loader = load_dataloader('waveform_loader_train.pickle')
   print(timelog('Loaded training set'), time())
@@ -308,7 +308,7 @@ def run(checkpoint_path):
   discriminator = Discriminator(in_channels)
   g_optimizer = optim.Adam(generator.parameters(), lr=alpha, betas=(beta1, beta2))
   d_optimizer = optim.Adam(discriminator.parameters(), lr=alpha, betas=(beta1, beta2))
-  criterion_loss = nn.MSELoss()
+  aux_loss = nn.MSELoss()
 
   device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
   generator = generator.to(device)
@@ -359,11 +359,13 @@ def run(checkpoint_path):
       g_optimizer.step()
 
       if i > 0 and (i % 100 == 0 or i == len(train_loader) - 1):
-        print(timelog(f'Epoch {epoch + 1}/{total_epochs} | Batch {i}/{len(train_loader)}', start_time))
-        print(f'  G Loss Diff: {sum(g_losses) - g_loss_total}')
-        print(f'  D Loss Diff: {sum(d_losses) - d_loss_total}')
-        g_loss_total = sum(g_losses)
-        d_loss_total = sum(d_losses)
+        g_loss_sum = sum(g_losses)
+        d_loss_sum = sum(d_losses)
+        print(timelog(f'Epoch {epoch+1}/{total_epochs} | Batch {i}/{len(train_loader)}', start_time))
+        print(f'  G Loss Diff: {g_loss_sum - g_loss_total}')
+        print(f'  D Loss Diff: {d_loss_sum - d_loss_total}')
+        g_loss_total = g_loss_sum
+        d_loss_total = d_loss_sum
         plt.plot(g_losses, label='Generator Loss')
         plt.plot(d_losses, label='Discriminator Loss')
         plt.xlabel('Iteration')
@@ -388,4 +390,4 @@ def run(checkpoint_path):
     epoch += 1
 
 if __name__ == '__main__':
-  run()
+  run(checkpoint_path='waveform_checkpoint.pth', params_path='waveform_params.json')
