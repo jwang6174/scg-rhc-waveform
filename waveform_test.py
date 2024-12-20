@@ -3,6 +3,7 @@ import os
 import pickle
 import torch
 import matplotlib.pyplot as plt
+from datetime import datetime
 from torch.utils.data import DataLoader
 from waveform_train import Generator, SCGDataset
 
@@ -15,6 +16,7 @@ generator.load_state_dict(checkpoint['g_state_dict'])
 generator.eval()
 
 for i, (scg, real_rhc, filename, start_idx, stop_idx) in enumerate(test_loader, start=1):
+  timestamp = str(datetime.now().strftime('%Y-%m-%d %H-%M-%S')).replace(' ', '_')
   real_rhc = real_rhc.detach().numpy()[0, 0, :]
   pred_rhc = generator(scg).detach().numpy()[0, 0, :]
   plt.plot(pred_rhc, label='Pred RHC')
@@ -22,7 +24,7 @@ for i, (scg, real_rhc, filename, start_idx, stop_idx) in enumerate(test_loader, 
   plt.xlabel('Sample')
   plt.ylabel('mmHg')
   plt.legend()
-  plt.savefig(f'waveform_test_plot_{i}.png')
+  plt.savefig(f'waveform_test_plot_{timestamp}_{i}.png')
   plt.close()
   if i == 3:
     break
