@@ -1,3 +1,4 @@
+import json
 import matplotlib.pyplot as plt
 import numpy as np
 import os
@@ -10,12 +11,6 @@ from sklearn.model_selection import train_test_split
 from torch.utils.data import Dataset, DataLoader
 from waveform_noise import has_noise
 
-SCG_CHANNELS = ['patch_ACC_lat', 'patch_ACC_hf']
-SEGMENT_SIZE = 750
-BATCH_SIZE = 128
-TRAIN_PATH ='waveform_loader_train.pickle'
-VALID_PATH = 'waveform_loader_valid.pickle'
-TEST_PATH = 'waveform_loader_test.pickle'
 
 class SCGDataset(Dataset):
   """
@@ -164,13 +159,15 @@ def load_dataloader(path):
 
 
 if __name__ == '__main__':
-  save_dataloaders(
-    SCG_CHANNELS,
-    SEGMENT_SIZE,
-    BATCH_SIZE,
-    TRAIN_PATH,
-    VALID_PATH,
-    TEST_PATH
-  )
+  with open('waveform_params.json', 'r') as f:
+    data = json.loads(f)
+    save_dataloaders(
+      data['scg_channels'],
+      data['segment_size'],
+      data['batch_size'],
+      data['train_path'],
+      data['valid_path'],
+      data['test_path'],
+    )
 
 
