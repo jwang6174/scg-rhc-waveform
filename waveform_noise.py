@@ -31,23 +31,6 @@ def get_flat_lines(waveform, threshold=1e-3, min_duration=0.1, sampling_rate=500
   return flat_segments
 
 
-def get_vertical_lines(waveform, threshold=1.0, sampling_rate=500):
-    
-  # Compute the derivative (rate of change)
-  derivative = np.diff(waveform) * sampling_rate  # Derivative approximation
-    
-  # Identify points where the derivative exceeds the threshold
-  vertical_indices = np.where(np.abs(derivative) > threshold)[0]
-    
-  # Classify direction of the change
-  directions = np.sign(derivative[vertical_indices])
-    
-  # Combine indices and directions
-  vertical_lines = [(index, direction) for index, direction in zip(vertical_indices, directions)]
-    
-  return vertical_lines
-
-
 def is_straight_line(waveform):
   x = np.arange(len(waveform))
   y = np.array(waveform)
@@ -59,6 +42,5 @@ def is_straight_line(waveform):
 def has_noise(waveform):
   return (
     len(get_flat_lines(waveform)) > 0 or
-    # len(get_vertical_lines(waveform)) > 0 or
     is_straight_line(waveform)
   )
