@@ -244,7 +244,7 @@ class Discriminator(nn.Module):
     return self.model(x) 
 
 
-def compute_gp(discriminator, scg, real_rhc, pred_rhc, lambda_gp):
+def compute_gp(discriminator, scg, real_rhc, pred_rhc):
   """
   Penalize the norm of gradient of the discriminator with respect to its input
   to avoid parameter binarization. Used as an alternative to weight clipping to
@@ -281,28 +281,33 @@ def compute_gp(discriminator, scg, real_rhc, pred_rhc, lambda_gp):
   gradients = gradients.view(gradients.size(0), -1)
   gp = ((gradients.norm(2, dim=1) - 1) ** 2).mean()
 
-  return lambda_gp * gp
-      
-def run(checkpoint_path, params_path):
+  return gp
 
-  if checkpoint_path is not None:
-    print(timelog('Resumed waveform training', time()))
-  else:
-    print(timelog('Started waveform training', time()))
+
+def run(params_path):
+  """
+  Run waveform training from given checkpoint, if any, and parameters.
+  """
+
+  print(timelog(f'Started waveform training with {params_path}', time()))
 
   with open(params_path, 'r') as f:
-    data = json.loads(f)
-    alpha = data['alpha']
-    beta1 = data['beta1']
-    beta2 = data['beta2']
-    n_critic = data['n_critic']
-    lambda_gp = data['lambda_gp']
-    lambda_aux = data['lambda_aux']
-    total_epochs = data['total_epochs']
-  print(timelog('Loaded parameters'), time())
+    params = json.load(f)
+    in_channels = len(params['in_channels'])
+    alpha = params['alpha']
+    beta1 = params['beta1']
+    beta2 = params['beta2']
+    n_critic = params['n_critic']
+    lambda_gp = params['lambda_gp']
+    lambda_aux = params['lambda_aux']
+    total_epochs = params['total_epochs']
+    train_path = params['train_path']
+    checkpoint_path = params['checkpoint_path']
+    losses_fig_path = params['losses_fig_path']
+  print(timelog('Loaded parameters', time()))
 
-  train_loader = load_dataloader('waveform_loader_train.pickle')
-  print(timelog('Loaded training set'), time())
+  train_loader = load_dataloader(train_path)
+  print(timelog('Loaded training set', time()))
   
   generator = Generator(in_channels)
   discriminator = Discriminator(in_channels)
@@ -313,7 +318,7 @@ def run(checkpoint_path, params_path):
   device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
   generator = generator.to(device)
   discriminator = discriminator.to(device)
-  criterion_loss = criterion_loss.to(device)
+  aux_loss = aux_loss.to(device)
 
   if checkpoint_path is not None:
     checkpoint = torch.load(checkpoint_path, weights_only=False)
@@ -343,8 +348,8 @@ def run(checkpoint_path, params_path):
         pred_rhc = generator(scg)
         pred_validity = discriminator(torch.cat((scg, pred_rhc), dim=1)) 
         real_validity = discriminator(torch.cat((scg, rhc), dim=1))
-        gp = compute_gp(discriminator, scg, rhc, pred_rhc, lambda_gp)
-        d_loss = -torch.mean(real_validity) + torch.mean(pred_validity) + gp
+        gp = compute_gp(discriminator, scg, rhc, pred_rhc)
+        d_loss = -torch.mean(real_validity) + torch.mean(pred_validity) + (lambda_gp * gp)
         d_losses.append(d_loss.item())
         d_optimizer.zero_grad()
         d_loss.backward()
@@ -352,7 +357,7 @@ def run(checkpoint_path, params_path):
 
       pred_rhc = generator(scg)
       pred_validity = discriminator(torch.cat((scg, rhc), dim=1))
-      g_loss = -torch.mean(pred_validity) + lambda_c * criterion_loss(pred_rhc, rhc)
+      g_loss = -torch.mean(pred_validity) + (lambda_aux * aux_loss(pred_rhc, rhc))
       g_losses.append(g_loss.item())
       g_optimizer.zero_grad()
       g_loss.backward()
@@ -372,7 +377,7 @@ def run(checkpoint_path, params_path):
         plt.ylabel('Loss')
         plt.ylim(0, 50)
         plt.legend()
-        plt.savefig('waveform_losses.png')
+        plt.savefig(losses_fig_path)
         plt.close()
       
     checkpoint = {
@@ -385,9 +390,9 @@ def run(checkpoint_path, params_path):
       'g_optimizer_state_dict': g_optimizer.state_dict(),
       'd_optimizer_state_dict': d_optimizer.state_dict(),
     }
-    torch.save(checkpoint, 'waveform_checkpoint.pth')
+    torch.save(checkpoint, checkpoint_path)
 
     epoch += 1
 
 if __name__ == '__main__':
-  run(checkpoint_path='waveform_checkpoint.pth', params_path='waveform_params.json')
+  run(params_path='01_waveform_params.json')
