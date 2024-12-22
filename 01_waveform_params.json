@@ -2,7 +2,7 @@
   "scg_channels": ["patch_ACC_lat", "patch_ACC_hf"],
   "segment_size": 750,
   "batch_size": 128,
-  "train_path": "waveform_loader_train.pickl",
+  "train_path": "waveform_loader_train.pickle",
   "valid_path": "waveform_loader_valid.pickle",
   "test_path": "waveform_loader_test.pickle",
   "alpha": 0.0001,
@@ -11,5 +11,5 @@
   "n_critic": 2,
   "lambda_gp": 10,
   "lambda_aux": 100,
-  "total_epochs": 500,
+  "total_epochs": 500
 }
