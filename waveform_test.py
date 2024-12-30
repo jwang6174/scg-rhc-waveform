@@ -1,22 +1,26 @@
+import json
 import matplotlib.pyplot as plt
 import numpy as np
 import os
+import pandas as pd
 import pickle
 import torch
 import matplotlib.pyplot as plt
 from collections import namedtuple
 from datetime import datetime
 from fastdtw import fastdtw
+from recordutil import PROCESSED_DATA_PATH
 from scipy.spatial.distance import euclidean, cosine
 from skimage.metrics import structural_similarity as ssim
 from torch.utils.data import DataLoader
 from waveform_train import Generator, SCGDataset
 
-def save_test_plots(generator, test_loader, num_plots=3):
+
+def save_pred_plots(generator, loader, num_plots=3):
   """
   Save a certain number of predicted vs real RHC plots.
   """
-  for i, (scg, real_rhc, filename, start_idx, stop_idx) in enumerate(test_loader, start=1):
+  for i, (scg, real_rhc, filename, start_idx, stop_idx) in enumerate(loader, start=1):
     timestamp = str(datetime.now().strftime('%Y-%m-%d %H-%M-%S')).replace(' ', '_')
     real_rhc = real_rhc.detach().numpy()[0, 0, :]
     pred_rhc = generator(scg).detach().numpy()[0, 0, :]
@@ -25,10 +29,11 @@ def save_test_plots(generator, test_loader, num_plots=3):
     plt.xlabel('Sample')
     plt.ylabel('mmHg')
     plt.legend()
-    plt.savefig(f'waveform_test_plot_{timestamp}_{i}.png')
+    plt.savefig(f'waveform_pred_plot_{timestamp}_{i}.png')
     plt.close()
     if i == num_plots:
-      break 
+      break
+
 
 def get_cross_correlation(x, y):
   """
@@ -73,7 +78,9 @@ def get_dynamic_time_warping(x, y):
 
   Limitations: Computationally intensive for long signals.
   """
-  distance, path = fastdtw(x, y, dist=euclidean)
+  x = np.array([x])
+  y = np.array([y])
+  distance, _ = fastdtw(x, y, dist=euclidean)
   return distance
 
 
@@ -125,7 +132,7 @@ def get_structural_similarity(x, y):
   """
   x = np.array(x)
   y = np.array(y)
-  return ssim(x, y)
+  return ssim(x, y, data_range=1.0)
 
 
 def get_correlation_coefficient(x, y):
@@ -143,45 +150,68 @@ def get_correlation_coefficient(x, y):
 
 def get_waveform_comparison(x, y):
   """
-  Get comparison metrics for 2 waveforms.
+  Get comparison metrics for real and predicted RHC waveforms.
   """
-  fields = [
-    'crosscor',
-    'mse',
-    'dtw',
-    'cosim',
-    'specsim',
-    'strucsim',
-    'corcoeff'
-  ]
-  Comparison = namedtuple('Comparison', fields)
-  return Comparison(
-    get_cross_correlation(x, y),
-    get_mean_squared_error(x, y),
-    get_dynamic_time_warping(x, y),
-    get_cosine_similarity(x, y),
-    get_spectral_similarity(x, y),
-    get_structural_similarity(x, y),
-    get_correlation_coefficient(x, y)
-  )
+  return {
+    'real_rhc': x,
+    'pred_rhc': y,
+    'crosscor': get_cross_correlation(x, y),
+    'mse': get_mean_squared_error(x, y),
+    'dtw': get_dynamic_time_warping(x, y),
+    'cosim': get_cosine_similarity(x, y),
+    'specsim': get_spectral_similarity(x, y),
+    'strucsim': get_structural_similarity(x, y),
+    'corcoeff': get_correlation_coefficient(x, y)
+  }
 
 
-def run(checkpoint_path, loader_path):
+def get_waveform_comparisons(generator, loader):
+  """
+  Get all waveform comparions for real and predicted RHC waveforms.
+  """
+  comparisons = []
+  for i, (scg, real_rhc, filename, start_idx, stop_idx) in enumerate(loader, start=1):
+    real_rhc = real_rhc.detach().numpy()[0, 0, :]
+    pred_rhc = generator(scg).detach().numpy()[0, 0, :]
+    comparison = get_waveform_comparison(real_rhc, pred_rhc)
+    filename = filename[0]
+    comparison['filename'] = filename
+    comparison['start_idx'] = start_idx
+    comparison['stop_idx'] = stop_idx
+    with open(os.path.join(PROCESSED_DATA_PATH, f'{filename}.json'), 'r') as f:
+      comparison.update(json.load(f))
+    comparisons.append(comparison)
+  return comparisons
+
+
+def run(params_path):
   """
   Run tests.
   """
-  with open(loader_path, 'rb') as f:
+
+  with open(params_path, 'r') as f:
+    params = json.load(f)
+  
+  with open(params['train_path'], 'rb') as f:
+    train_loader = pickle.load(f)
+
+  with open(params['test_path'], 'rb') as f:
     test_loader = pickle.load(f)
 
-  checkpoint = torch.load(checkpoint_path, weights_only=False)
-  generator = Generator(checkpoint['in_channels'])
+  checkpoint = torch.load(params['checkpoint_path'], weights_only=False)
+  generator = Generator(len(params['in_channels']))
   generator.load_state_dict(checkpoint['g_state_dict'])
   generator.eval()
 
-  save_test_plots(generator, test_loader, num_plots=5)
+  save_pred_plots(generator, train_loader, num_plots=5)
+  save_pred_plots(generator, test_loader, num_plots=5)
+  
+  comparisons = get_waveform_comparisons(generator, test_loader)
+  comparisons_df = pd.DataFrame(comparisons)
+  comparisons_df.to_csv('comparisons.csv')
 
 
 if __name__ == '__main__':
-  checkpoint_path = 'waveform_checkpoint.pth'
-  loader_path = 'waveform_loader_test.pickle'
-  run(checkpoint_path, loader_path)
+  params_path = '01_waveform_params.json'
+  run(params_path)
+
