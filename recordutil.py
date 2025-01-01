@@ -119,7 +119,7 @@ def get_segments(scg_channels, size, dirname, record_name=None):
           segments.append((scg_segment, rhc_segment, record_name, start_idx, stop_idx))
       return segments
     except Exception as e:
-      print(e)
+      print(f'Encountered exception "{e}" with record "{record_name}"')
       return []
 
 
@@ -160,6 +160,14 @@ def load_dataloader(path):
 
 
 if __name__ == '__main__':
-  save_dataloaders(['patch_ACC_lat', 'patch_ACC_hf'], 750, 32, 'loader_train.pickle', 'loader_valid.pickle', 'loader_test.pickle')
-
+  with open('02_waveform_params.json', 'r') as f:
+    params = json.load(f)
+    save_dataloaders(
+      params['in_channels'],
+      params['segment_size'],
+      params['batch_size'],
+      params['train_path'],
+      params['valid_path'],
+      params['test_path']
+    )
 
