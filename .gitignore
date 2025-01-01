@@ -213,3 +213,4 @@ waveform_results/
 *.png
 *.pickle
 *.pth
+*.csv
