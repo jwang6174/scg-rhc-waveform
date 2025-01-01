@@ -57,10 +57,10 @@ class SCGDataset(Dataset):
     segment = self.segments[index]
     scg = self.pad(self.invert(self.minmax_norm(segment[0])))
     rhc = self.pad(self.invert(self.minmax_norm(segment[1])))
-    filename = segment[2]
+    record_name = segment[2]
     start_idx = segment[3]
     stop_idx = segment[4]
-    return scg, rhc, filename, start_idx, stop_idx
+    return scg, rhc, record_name, start_idx, stop_idx
 
 
 def get_record_names(dirname):
@@ -74,14 +74,14 @@ def get_record_names(dirname):
   return list(filenames)
 
 
-def get_records(dirname):
+def get_records(record_names):
   """
   Get WFDB record objects in a given directory.
   """
   records = []
-  for filename in get_record_names(dirname):
-    record_obj = wfdb.rdrecord(os.path.join(dirname, filename))
-    records.append((filename, record_obj))
+  for record_name in record_names:
+    record = wfdb.rdrecord(os.path.join(dirname, record_name))
+    records.append(record)
   return records
 
 
@@ -94,32 +94,32 @@ def get_channels(record, channel_names):
   return channels
   
 
-def get_segments(scg_channels, size, record=None):
+def get_segments(scg_channels, size, dirname, record_name=None):
   """
   Get segments of a given size with the specified SCG channels.
   """
-  if record is None:
+  if record_name is None:
     segments = []
-    for record in get_records(PROCESSED_DATA_PATH):
-      segments.extend(get_segments(scg_channels, size, record=record))
+    for record_name in get_record_names(dirname):
+      segments.extend(get_segments(scg_channels, size, dirname, record_name=record_name))
     return segments
   else:
     try:
       segments = []
-      filename = record[0]
-      record_obj = record[1]
-      scg_signal = get_channels(record_obj, scg_channels)
-      rhc_signal = get_channels(record_obj, ['RHC_pressure'])
-      num_segments = record_obj.p_signal.shape[0] // size
+      record = wfdb.rdrecord(os.path.join(dirname, record_name))
+      scg_signal = get_channels(record, scg_channels)
+      rhc_signal = get_channels(record, ['RHC_pressure'])
+      num_segments = record.p_signal.shape[0] // size
       for i in range(num_segments):
         start_idx = i * size
         stop_idx = start_idx + size
         scg_segment = scg_signal[start_idx:stop_idx]
         rhc_segment = rhc_signal[start_idx:stop_idx]
         if not has_noise(rhc_segment[:, 0]):
-          segments.append((scg_segment, rhc_segment, filename, start_idx, stop_idx))
+          segments.append((scg_segment, rhc_segment, record_name, start_idx, stop_idx))
       return segments
-    except ValueError:
+    except Exception as e:
+      print(e)
       return []
 
 
@@ -128,9 +128,10 @@ def save_dataloaders(scg_channels, segment_size, batch_size,
   """
   Get training and test segments, then save as torch DataLoader objects.
   """
-  all_segments = get_segments(scg_channels, segment_size)
+  all_segments = get_segments(scg_channels, segment_size, PROCESSED_DATA_PATH)
+
   train_segments, non_train_segments = train_test_split(all_segments, train_size=0.9)
-  valid_segments, test_segments = train_test_split(train_segments, train_size=0.5)
+  valid_segments, test_segments = train_test_split(non_train_segments, train_size=0.5)
 
   train_set = SCGDataset(train_segments, segment_size)
   valid_set = SCGDataset(valid_segments, segment_size)
@@ -138,7 +139,7 @@ def save_dataloaders(scg_channels, segment_size, batch_size,
 
   train_loader = DataLoader(train_set, batch_size=batch_size, shuffle=True)
   valid_loader = DataLoader(valid_set, batch_size=1, shuffle=True)
-  test_loader = Datazloader(test_set, batch_size=1, shuffle=True)
+  test_loader = DataLoader(test_set, batch_size=1, shuffle=True)
   
   with open(train_path, 'wb') as f:
     pickle.dump(train_loader, f)
@@ -159,15 +160,6 @@ def load_dataloader(path):
 
 
 if __name__ == '__main__':
-  with open('waveform_params.json', 'r') as f:
-    data = json.loads(f)
-    save_dataloaders(
-      data['scg_channels'],
-      data['segment_size'],
-      data['batch_size'],
-      data['train_path'],
-      data['valid_path'],
-      data['test_path'],
-    )
+  save_dataloaders(['patch_ACC_lat', 'patch_ACC_hf'], 750, 32, 'loader_train.pickle', 'loader_valid.pickle', 'loader_test.pickle')
 
 
