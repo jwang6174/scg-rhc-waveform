@@ -176,8 +176,8 @@ def get_waveform_comparisons(generator, loader):
     comparison = get_waveform_comparison(real_rhc, pred_rhc)
     filename = filename[0]
     comparison['filename'] = filename
-    comparison['start_idx'] = start_idx
-    comparison['stop_idx'] = stop_idx
+    comparison['start_idx'] = int(start_idx)
+    comparison['stop_idx'] = int(stop_idx)
     with open(os.path.join(PROCESSED_DATA_PATH, f'{filename}.json'), 'r') as f:
       comparison.update(json.load(f))
     comparisons.append(comparison)
@@ -203,12 +203,12 @@ def run(params_path):
   generator.load_state_dict(checkpoint['g_state_dict'])
   generator.eval()
 
-  save_pred_plots(generator, train_loader, num_plots=5)
-  save_pred_plots(generator, test_loader, num_plots=5)
+  # save_pred_plots(generator, train_loader, num_plots=5)
+  # save_pred_plots(generator, test_loader, num_plots=5)
   
   comparisons = get_waveform_comparisons(generator, test_loader)
   comparisons_df = pd.DataFrame(comparisons)
-  comparisons_df.to_csv('comparisons.csv')
+  comparisons_df.to_csv(params['comparisons_path'], index=False)
 
 
 if __name__ == '__main__':
