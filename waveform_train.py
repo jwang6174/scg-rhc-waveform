@@ -7,6 +7,7 @@ import torch.autograd as autograd
 import torch.nn as nn
 import torch.nn.functional as F
 import torch.optim as optim
+from paramutil import Params
 from recordutil import load_dataloader, SCGDataset
 from time import time
 from timelog import timelog
@@ -284,26 +285,24 @@ def compute_gp(discriminator, scg, real_rhc, pred_rhc):
   return gp
 
 
-def run(params_path):
+def run(params):
   """
   Run waveform training from given checkpoint, if any, and parameters.
   """
 
   print(timelog(f'Started waveform training with {params_path}', time()))
 
-  with open(params_path, 'r') as f:
-    params = json.load(f)
-    in_channels = len(params['in_channels'])
-    alpha = params['alpha']
-    beta1 = params['beta1']
-    beta2 = params['beta2']
-    n_critic = params['n_critic']
-    lambda_gp = params['lambda_gp']
-    lambda_aux = params['lambda_aux']
-    total_epochs = params['total_epochs']
-    train_path = params['train_path']
-    checkpoint_path = params['checkpoint_path']
-    losses_fig_path = params['losses_fig_path']
+  in_channels = len(params.in_channels)
+  alpha = params.alpha
+  beta1 = params.beta1
+  beta2 = params.beta2
+  n_critic = params.n_critic
+  lambda_gp = params.lambda_gp
+  lambda_aux = params.lambda_aux
+  total_epochs = params.total_epoch
+  train_path = params.train_path
+  checkpoint_path = params.checkpoint_path
+  losses_fig_path = params.losses_fig_path
   print(timelog('Loaded parameters', time()))
 
   train_loader = load_dataloader(train_path)
@@ -395,4 +394,4 @@ def run(params_path):
     epoch += 1
 
 if __name__ == '__main__':
-  run(params_path='01_waveform_params.json')
+  run(Params('01_waveform/params.jon'))
