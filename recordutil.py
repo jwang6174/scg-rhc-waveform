@@ -5,6 +5,7 @@ import os
 import pickle
 import torch
 import wfdb
+from paramutil import Params
 from pathlib import Path
 from pathutil import PROCESSED_DATA_PATH
 from sklearn.model_selection import train_test_split
@@ -74,17 +75,6 @@ def get_record_names(dirname):
   return list(filenames)
 
 
-def get_records(record_names):
-  """
-  Get WFDB record objects in a given directory.
-  """
-  records = []
-  for record_name in record_names:
-    record = wfdb.rdrecord(os.path.join(dirname, record_name))
-    records.append(record)
-  return records
-
-
 def get_channels(record, channel_names):
   """
   Get specific channels from record by channel name.
@@ -94,25 +84,25 @@ def get_channels(record, channel_names):
   return channels
   
 
-def get_segments(scg_channels, size, dirname, record_name=None):
+def get_segments(in_channels, segment_size, dirname, record_name=None):
   """
   Get segments of a given size with the specified SCG channels.
   """
   if record_name is None:
     segments = []
     for record_name in get_record_names(dirname):
-      segments.extend(get_segments(scg_channels, size, dirname, record_name=record_name))
+      segments.extend(get_segments(in_channels, segment_size, dirname, record_name=record_name))
     return segments
   else:
     try:
       segments = []
       record = wfdb.rdrecord(os.path.join(dirname, record_name))
-      scg_signal = get_channels(record, scg_channels)
+      scg_signal = get_channels(record, in_channels)
       rhc_signal = get_channels(record, ['RHC_pressure'])
-      num_segments = record.p_signal.shape[0] // size
+      num_segments = record.p_signal.shape[0] // segment_size
       for i in range(num_segments):
-        start_idx = i * size
-        stop_idx = start_idx + size
+        start_idx = i * segment_size
+        stop_idx = start_idx + segment_size
         scg_segment = scg_signal[start_idx:stop_idx]
         rhc_segment = rhc_signal[start_idx:stop_idx]
         if not has_noise(rhc_segment[:, 0]):
@@ -123,31 +113,30 @@ def get_segments(scg_channels, size, dirname, record_name=None):
       return []
 
 
-def save_dataloaders(scg_channels, segment_size, batch_size, 
-                     train_path, valid_path, test_path):
+def save_dataloaders(params):
   """
   Get training and test segments, then save as torch DataLoader objects.
   """
-  all_segments = get_segments(scg_channels, segment_size, PROCESSED_DATA_PATH)
+  all_segments = get_segments(params.in_channels, params.segment_size, PROCESSED_DATA_PATH)
 
   train_segments, non_train_segments = train_test_split(all_segments, train_size=0.9)
   valid_segments, test_segments = train_test_split(non_train_segments, train_size=0.5)
 
-  train_set = SCGDataset(train_segments, segment_size)
-  valid_set = SCGDataset(valid_segments, segment_size)
-  test_set = SCGDataset(test_segments, segment_size)
+  train_set = SCGDataset(train_segments, params.segment_size)
+  valid_set = SCGDataset(valid_segments, params.segment_size)
+  test_set = SCGDataset(test_segments, params.segment_size)
 
-  train_loader = DataLoader(train_set, batch_size=batch_size, shuffle=True)
+  train_loader = DataLoader(train_set, batch_size=params.batch_size, shuffle=True)
   valid_loader = DataLoader(valid_set, batch_size=1, shuffle=True)
   test_loader = DataLoader(test_set, batch_size=1, shuffle=True)
   
-  with open(train_path, 'wb') as f:
+  with open(params.train_path, 'wb') as f:
     pickle.dump(train_loader, f)
 
-  with open(valid_path, 'wb') as f:
+  with open(params.valid_path, 'wb') as f:
     pickle.dump(valid_loader, f)
   
-  with open(test_path, 'wb') as f:
+  with open(params.test_path, 'wb') as f:
     pickle.dump(test_loader, f)
 
 
@@ -160,14 +149,5 @@ def load_dataloader(path):
 
 
 if __name__ == '__main__':
-  with open('02_waveform_params.json', 'r') as f:
-    params = json.load(f)
-    save_dataloaders(
-      params['in_channels'],
-      params['segment_size'],
-      params['batch_size'],
-      params['train_path'],
-      params['valid_path'],
-      params['test_path']
-    )
-
+  params = Params('02_waveform/params.json')
+  save_dataloaders(params)
