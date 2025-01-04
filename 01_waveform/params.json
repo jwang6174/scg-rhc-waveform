@@ -1,6 +1,6 @@
 {
   "in_channels": ["patch_ACC_lat", "patch_ACC_hf"],
-  "segment_size": 750,
+  "segment_size": 1.5,
   "batch_size": 128,
   "dir_path": "01_waveform",
   "train_path": "loader_train.pickle",

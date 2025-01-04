@@ -12,6 +12,8 @@ from sklearn.model_selection import train_test_split
 from torch.utils.data import Dataset, DataLoader
 from waveform_noise import has_noise
 
+SAMPLE_FREQ = 500
+
 
 class SCGDataset(Dataset):
   """
@@ -19,7 +21,7 @@ class SCGDataset(Dataset):
   """
   def __init__(self, segments, segment_size):
     self.segments = segments
-    self.segment_size = segment_size
+    self.segment_size = int(segment_size * SAMPLE_FREQ)
 
   def pad(self, tensor):
     """
@@ -64,12 +66,12 @@ class SCGDataset(Dataset):
     return scg, rhc, record_name, start_idx, stop_idx
 
 
-def get_record_names(dirname):
+def get_record_names():
   """
   Get record names in a given directory.
   """
   filenames = set()
-  for filename in os.listdir(dirname):
+  for filename in os.listdir(PROCESSED_DATA_PATH):
     if filename.endswith('.dat') or filename.endswith('.hea'):
       filenames.add(Path(filename).stem)
   return list(filenames)
@@ -84,19 +86,20 @@ def get_channels(record, channel_names):
   return channels
   
 
-def get_segments(in_channels, segment_size, dirname, record_name=None):
+def get_segments(in_channels, segment_size, record_name=None):
   """
   Get segments of a given size with the specified SCG channels.
   """
   if record_name is None:
     segments = []
-    for record_name in get_record_names(dirname):
-      segments.extend(get_segments(in_channels, segment_size, dirname, record_name=record_name))
+    for record_name in get_record_names():
+      segments.extend(get_segments(in_channels, segment_size, record_name=record_name))
     return segments
   else:
     try:
       segments = []
-      record = wfdb.rdrecord(os.path.join(dirname, record_name))
+      segment_size = int(segment_size * SAMPLE_FREQ)
+      record = wfdb.rdrecord(os.path.join(PROCESSED_DATA_PATH, record_name))
       scg_signal = get_channels(record, in_channels)
       rhc_signal = get_channels(record, ['RHC_pressure'])
       num_segments = record.p_signal.shape[0] // segment_size
@@ -117,7 +120,7 @@ def save_dataloaders(params):
   """
   Get training and test segments, then save as torch DataLoader objects.
   """
-  all_segments = get_segments(params.in_channels, params.segment_size, PROCESSED_DATA_PATH)
+  all_segments = get_segments(params.in_channels, params.segment_size)
 
   train_segments, non_train_segments = train_test_split(all_segments, train_size=0.9)
   valid_segments, test_segments = train_test_split(non_train_segments, train_size=0.5)
