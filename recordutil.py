@@ -5,6 +5,7 @@ import os
 import pickle
 import torch
 import wfdb
+from datetime import datetime
 from paramutil import Params
 from pathlib import Path
 from pathutil import PROCESSED_DATA_PATH
@@ -77,32 +78,52 @@ def get_record_names():
   return list(filenames)
 
 
-def get_channels(record, channel_names):
+def get_chamber_intervals(record_name, chamber):
+  """
+  Get time intervals in seconds for when cath was in a particular chamber.
+  """
+  intervals = []
+  with open(os.path.join(PROCESSED_DATA_PATH, f'{record_name}.json'), 'r') as f:
+    data = json.load(f)
+    macStTime = datetime.strptime(data['MacStTime'].split()[1], '%H:%M:%S')
+    macEndTime = datetime.strptime(data['MacEndTime'].split()[1], '%H:%M:%S')
+    chamEvents = data['ChamEvents_in_s']
+    if isinstance(chamEvents, dict):
+      chamEvents['END'] = (macEndTime - macStTime).total_seconds()
+      chamEvents = sorted(chamEvents.items(), key=lambda x: x[1])
+      intervals = []
+      for i, event in enumerate(chamEvents[:-1]):
+        if event[0].split('_')[0] == chamber:
+          intervals.append((int(event[1] * SAMPLE_FREQ), int(chamEvents[i+1][1] * SAMPLE_FREQ)))
+  return intervals
+
+
+def get_channels(record, channel_names, start_idx, stop_idx):
   """
   Get specific channels from record by channel name.
   """
   indexes = [record.sig_name.index(name) for name in channel_names]
-  channels = record.p_signal[:, indexes]
+  channels = record.p_signal[start_idx:stop_idx, indexes]
   return channels
-  
 
-def get_segments(in_channels, segment_size, record_name=None):
+   
+def get_segments(in_channels, segment_size, chamber, record_name=None):
   """
   Get segments of a given size with the specified SCG channels.
   """
   if record_name is None:
     segments = []
     for record_name in get_record_names():
-      segments.extend(get_segments(in_channels, segment_size, record_name=record_name))
+      segments.extend(get_segments(in_channels, segment_size, chamber, record_name=record_name))
     return segments
   else:
-    try:
-      segments = []
-      segment_size = int(segment_size * SAMPLE_FREQ)
-      record = wfdb.rdrecord(os.path.join(PROCESSED_DATA_PATH, record_name))
-      scg_signal = get_channels(record, in_channels)
-      rhc_signal = get_channels(record, ['RHC_pressure'])
-      num_segments = record.p_signal.shape[0] // segment_size
+    segments = []
+    segment_size = int(segment_size * SAMPLE_FREQ)
+    record = wfdb.rdrecord(os.path.join(PROCESSED_DATA_PATH, record_name))
+    for interval in get_chamber_intervals(record_name, chamber):
+      scg_signal = get_channels(record, in_channels, interval[0], interval[1])
+      rhc_signal = get_channels(record, ['RHC_pressure'], interval[0], interval[1])
+      num_segments = scg_signal.shape[0] // segment_size
       for i in range(num_segments):
         start_idx = i * segment_size
         stop_idx = start_idx + segment_size
@@ -110,17 +131,14 @@ def get_segments(in_channels, segment_size, record_name=None):
         rhc_segment = rhc_signal[start_idx:stop_idx]
         if not has_noise(rhc_segment[:, 0]):
           segments.append((scg_segment, rhc_segment, record_name, start_idx, stop_idx))
-      return segments
-    except Exception as e:
-      print(f'Encountered exception "{e}" with record "{record_name}"')
-      return []
+    return segments
 
 
 def save_dataloaders(params):
   """
   Get training and test segments, then save as torch DataLoader objects.
   """
-  all_segments = get_segments(params.in_channels, params.segment_size)
+  all_segments = get_segments(params.in_channels, params.segment_size, params.chamber)
 
   train_segments, non_train_segments = train_test_split(all_segments, train_size=0.9)
   valid_segments, test_segments = train_test_split(non_train_segments, train_size=0.5)

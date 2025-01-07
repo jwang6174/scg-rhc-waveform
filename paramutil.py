@@ -7,6 +7,7 @@ class Params:
     self.path = path
     self.data = self.init_json(path)
     self.in_channels = self.data['in_channels']
+    self.chamber = self.data['chamber']
     self.segment_size = self.data['segment_size']
     self.batch_size = self.data['batch_size']
     self.dir_path = self.data['dir_path']
