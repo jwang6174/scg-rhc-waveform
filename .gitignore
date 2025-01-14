@@ -208,9 +208,13 @@ GitHub.sublime-settings
 
 # End of https://www.toptal.com/developers/gitignore/api/python,sublimetext
 
-waveform_results/
+checkpoints/
+pred_top/
+pred_rand/
+
 *.out
 *.png
 *.pickle
 *.pth
 *.csv
+*.checkpoint
