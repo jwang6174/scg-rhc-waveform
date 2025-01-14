@@ -399,7 +399,7 @@ def run(params):
       'g_optimizer_state_dict': g_optimizer.state_dict(),
       'd_optimizer_state_dict': d_optimizer.state_dict(),
     }
-    torch.save(checkpoint, os.path.join(checkpoint_dir_path, f'{epoch:03d}'))
+    torch.save(checkpoint, os.path.join(checkpoint_dir_path, f'{epoch:03d}.checkpoint'))
 
     epoch += 1
 
