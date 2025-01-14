@@ -51,7 +51,7 @@ def save_top_pred_plots(params, generator, sorted_comparisons, num_plots):
     plt.xlabel('Sample')
     plt.ylabel('mmHg')
     plt.legend()
-    plot_name = f'top_pred_plot_{i}_{filename}_{start_idx}-{stop_idx}'
+    plot_name = f'top_pred_plot_{i:03d}_{filename}_{start_idx}-{stop_idx}'
     plot_path = os.path.join(params.pred_top_dir_path, plot_name)
     plt.savefig(plot_path)
     plt.close()
@@ -113,5 +113,5 @@ def run(params, checkpoint):
 
 if __name__ == '__main__':
   params = Params('02_waveform/params.json')
-  run(params, '499')
+  run(params, '499.checkpoint')
 
