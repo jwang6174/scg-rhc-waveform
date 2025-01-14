@@ -1,0 +1,22 @@
+{
+  "in_channels": ["patch_ACC_lat", "patch_ACC_hf"],
+  "chamber": "PA",
+  "segment_size": 1.5,
+  "batch_size": 32,
+  "dir_path": "02_waveform",
+  "train_path": "loader_train.pickle",
+  "valid_path": "loader_valid.pickle",
+  "test_path": "loader_test.pickle",
+  "checkpoint_dir_path": "checkpoints",
+  "losses_fig_path": "train_losses.png",
+  "comparisons_path": "comparisons.csv",
+  "pred_top_dir_path": "pred_top",
+  "pred_rand_dir_path": "pred_rand",
+  "alpha": 0.0001,
+  "beta1": 0.5,
+  "beta2": 0.999,
+  "n_critic": 2,
+  "lambda_gp": 10,
+  "lambda_aux": 100,
+  "total_epochs": 500
+}
