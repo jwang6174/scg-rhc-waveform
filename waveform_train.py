@@ -1,6 +1,7 @@
 import json
 import matplotlib.pyplot as plt
 import numpy as np
+import os
 import pickle
 import torch
 import torch.autograd as autograd
@@ -285,13 +286,20 @@ def compute_gp(discriminator, scg, real_rhc, pred_rhc):
   return gp
 
 
+def get_last_checkpoint_path(dirpath):
+  """
+  Get last checkpoint path or None if starting new.
+  """
+  try:
+    return os.listdir(dirpath).sort(reverse=True)[0]
+  except:
+    return None
+
+
 def run(params):
   """
   Run waveform training from given checkpoint, if any, and parameters.
   """
-
-  print(timelog(f'Started waveform training with {params_path}', time()))
-
   in_channels = len(params.in_channels)
   alpha = params.alpha
   beta1 = params.beta1
@@ -299,11 +307,11 @@ def run(params):
   n_critic = params.n_critic
   lambda_gp = params.lambda_gp
   lambda_aux = params.lambda_aux
-  total_epochs = params.total_epoch
+  total_epochs = params.total_epochs
   train_path = params.train_path
-  checkpoint_path = params.checkpoint_path
+  checkpoint_dir_path = params.checkpoint_dir_path
   losses_fig_path = params.losses_fig_path
-  print(timelog('Loaded parameters', time()))
+  print(timelog('Loaded params', time()))
 
   train_loader = load_dataloader(train_path)
   print(timelog('Loaded training set', time()))
@@ -319,8 +327,10 @@ def run(params):
   discriminator = discriminator.to(device)
   aux_loss = aux_loss.to(device)
 
-  if checkpoint_path is not None:
-    checkpoint = torch.load(checkpoint_path, weights_only=False)
+  last_checkpoint_path = get_last_checkpoint_path(checkpoint_dir_path)
+
+  if last_checkpoint_path is not None:
+    checkpoint = torch.load(last_checkpoint_path, weights_only=False)
     start_time = checkpoint['start_time']
     epoch = checkpoint['epoch'] + 1
     g_losses = checkpoint['g_losses']
@@ -389,9 +399,11 @@ def run(params):
       'g_optimizer_state_dict': g_optimizer.state_dict(),
       'd_optimizer_state_dict': d_optimizer.state_dict(),
     }
-    torch.save(checkpoint, checkpoint_path)
+    torch.save(checkpoint, os.path.join(checkpoint_dir_path, f'{epoch:03d}'))
 
     epoch += 1
 
 if __name__ == '__main__':
-  run(Params('01_waveform/params.jon'))
+  path = '02_waveform/params.json'
+  print(timelog(f'Starting waveform training with {path}', time()))
+  run(Params(path))
