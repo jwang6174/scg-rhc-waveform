@@ -6,6 +6,7 @@ import pandas as pd
 import pickle
 import torch
 import matplotlib.pyplot as plt
+from datetime import datetime
 from fastdtw import fastdtw
 from paramutil import Params
 from recordutil import PROCESSED_DATA_PATH
@@ -51,7 +52,7 @@ def save_top_pred_plots(params, generator, sorted_comparisons, num_plots):
     plt.ylabel('mmHg')
     plt.legend()
     plot_name = f'top_pred_plot_{i}_{filename}_{start_idx}-{stop_idx}'
-    plot_path = os.path.join(params.pred_RHC_path, plot_name)
+    plot_path = os.path.join(params.pred_top_dir_path, plot_name)
     plt.savefig(plot_path)
     plt.close()
 
@@ -83,7 +84,7 @@ def get_waveform_comparisons(generator, loader):
   return comparisons
 
 
-def run(params):
+def run(params, checkpoint):
   """
   Run tests.
   """ 
@@ -93,13 +94,13 @@ def run(params):
   with open(params.test_path, 'rb') as f:
     test_loader = pickle.load(f)
 
-  checkpoint = torch.load(params.checkpoint_path, weights_only=False)
+  checkpoint = torch.load(os.path.join(params.checkpoint_dir_path, checkpoint), weights_only=False)
   generator = Generator(len(params.in_channels))
   generator.load_state_dict(checkpoint['g_state_dict'])
   generator.eval()
 
-  # save_random_pred_plots(params.dir_path, generator, train_loader, num_plots=5)
-  # save_random_pred_plots(params.dir_path, generator, test_loader, num_plots=5)
+  save_random_pred_plots(params.pred_rand_dir_path, generator, train_loader, num_plots=5)
+  save_random_pred_plots(params.pred_rand_dir_path, generator, test_loader, num_plots=5)
   
   comparisons = get_waveform_comparisons(generator, test_loader)
   comparisons.sort(key=lambda x: x['dtw'])
@@ -111,6 +112,6 @@ def run(params):
 
 
 if __name__ == '__main__':
-  params = Params('01_waveform/params.json')
-  run(params)
+  params = Params('02_waveform/params.json')
+  run(params, '499')
 
