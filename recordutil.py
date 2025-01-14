@@ -170,5 +170,7 @@ def load_dataloader(path):
 
 
 if __name__ == '__main__':
-  params = Params('02_waveform/params.json')
+  path = '02_waveform/params.json'
+  print(f'Running recordutil for {path}')
+  params = Params(path)
   save_dataloaders(params)
