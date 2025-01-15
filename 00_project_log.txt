@@ -2,3 +2,9 @@
 (eg, determinining if certain patients had lower accuracy, if particular 
 segments corresponding to specific cardiac chambers had lower accuracy, etc). It
 tries to replicate the original 'best' model published by Meng et al (2024).
+Later realized that the waveforms were not segmented by cardiac chamber (ie,
+the model was attempting to predict RA, RV, and PA waveforms). 
+
+02) This experiment tried to specifically predict PA waveforms. Implemented a
+smaller batch size of 32, compared to the batch size of 128 used in the original
+paper, on a hunch that it may provide better predictions.
