@@ -11,6 +11,7 @@ from fastdtw import fastdtw
 from paramutil import Params
 from recordutil import PROCESSED_DATA_PATH
 from scipy.spatial.distance import euclidean
+from sklearn.metrics import mean_absolute_error
 from torch.utils.data import DataLoader
 from waveform_train import Generator, SCGDataset
 
@@ -72,7 +73,10 @@ def get_waveform_comparisons(generator, loader):
       'stop_idx': int(stop_idx),
       'real_rhc': x,
       'pred_rhc': y,
-      'dtw': fastdtw(np.array([x]), np.array([y]), dist=euclidean)[0]
+      'dtw': fastdtw(np.array([x]), np.array([y]), dist=euclidean)[0],
+      'pcc': np.corrcoef(x, y)[0, 1],
+      'rmse': np.sqrt(np.mean((y - x) ** 2)),
+      'mae': mean_absolute_error(x, y)
     }
     comparisons.append(comparison)
 
