@@ -140,22 +140,16 @@ def save_dataloaders(params):
   """
   all_segments = get_segments(params.in_channels, params.segment_size, params.chamber)
 
-  train_segments, non_train_segments = train_test_split(all_segments, train_size=0.9)
-  valid_segments, test_segments = train_test_split(non_train_segments, train_size=0.5)
+  train_segments, test_segments = train_test_split(all_segments, train_size=0.9)
 
   train_set = SCGDataset(train_segments, params.segment_size)
-  valid_set = SCGDataset(valid_segments, params.segment_size)
   test_set = SCGDataset(test_segments, params.segment_size)
 
   train_loader = DataLoader(train_set, batch_size=params.batch_size, shuffle=True)
-  valid_loader = DataLoader(valid_set, batch_size=1, shuffle=True)
   test_loader = DataLoader(test_set, batch_size=1, shuffle=True)
   
   with open(params.train_path, 'wb') as f:
     pickle.dump(train_loader, f)
-
-  with open(params.valid_path, 'wb') as f:
-    pickle.dump(valid_loader, f)
   
   with open(params.test_path, 'wb') as f:
     pickle.dump(test_loader, f)
