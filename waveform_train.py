@@ -375,7 +375,7 @@ def run(params):
       if i > 0 and (i % 100 == 0 or i == len(train_loader) - 1):
         g_loss_sum = sum(g_losses)
         d_loss_sum = sum(d_losses)
-        print(timelog(f'Epoch {epoch+1}/{total_epochs} | Batch {i}/{len(train_loader)}', start_time))
+        print(timelog(f'Epoch {epoch+1}/{total_epochs} | Batch {i+1}/{len(train_loader)}', start_time))
         print(f'  G Loss Diff: {g_loss_sum - g_loss_total}')
         print(f'  D Loss Diff: {d_loss_sum - d_loss_total}')
         g_loss_total = g_loss_sum
