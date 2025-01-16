@@ -2,7 +2,7 @@
   "in_channels": ["patch_ACC_lat", "patch_ACC_hf"],
   "chamber": "PA",
   "segment_size": 1.5,
-  "batch_size": 32,
+  "batch_size": 16,
   "dir_path": "02_waveform",
   "train_path": "loader_train.pickle",
   "valid_path": "loader_valid.pickle",
@@ -18,5 +18,5 @@
   "n_critic": 2,
   "lambda_gp": 10,
   "lambda_aux": 100,
-  "total_epochs": 500
+  "total_epochs": 1000
 }
