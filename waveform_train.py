@@ -291,7 +291,7 @@ def get_last_checkpoint_path(dirpath):
   Get last checkpoint path or None if starting new.
   """
   try:
-    return os.listdir(dirpath).sort(reverse=True)[0]
+    return sorted(os.listdir(dirpath), reverse=True)[0]
   except:
     return None
 
@@ -330,7 +330,8 @@ def run(params):
   last_checkpoint_path = get_last_checkpoint_path(checkpoint_dir_path)
 
   if last_checkpoint_path is not None:
-    checkpoint = torch.load(last_checkpoint_path, weights_only=False)
+    print(timelog(f'Loaded prior checkpoint: {last_checkpoint_path}', time()))
+    checkpoint = torch.load(os.path.join(checkpoint_dir_path, last_checkpoint_path), weights_only=False)
     start_time = checkpoint['start_time']
     epoch = checkpoint['epoch'] + 1
     g_losses = checkpoint['g_losses']
@@ -340,6 +341,7 @@ def run(params):
     g_optimizer.load_state_dict(checkpoint['g_optimizer_state_dict'])
     d_optimizer.load_state_dict(checkpoint['d_optimizer_state_dict'])
   else:
+    print(timelog(f'Started new checkpoint', time()))
     start_time = time()
     epoch = 0
     g_losses = []
@@ -384,7 +386,6 @@ def run(params):
         plt.plot(d_losses, label='Discriminator Loss')
         plt.xlabel('Iteration')
         plt.ylabel('Loss')
-        plt.ylim(0, 50)
         plt.legend()
         plt.savefig(losses_fig_path)
         plt.close()
@@ -404,6 +405,6 @@ def run(params):
     epoch += 1
 
 if __name__ == '__main__':
-  path = '02_waveform/params.json'
+  path = '03_waveform/params.json'
   print(timelog(f'Starting waveform training with {path}', time()))
   run(Params(path))
