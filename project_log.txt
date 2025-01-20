@@ -7,6 +7,9 @@ the model was attempting to predict RA, RV, and PA waveforms).
 
 02) Tried to specifically predict PA waveforms. Implemented a smaller batch size 
 of 16, compared to the batch size of 128 used in the original paper, on a hunch 
-that it may provide better predictions.
+that it may provide better predictions. Later realized that SCG and RHC
+waveforms were being min-max normalized. Consider whether absolute values may
+lead to better results.
 
-03) Utilize all seismocardiogram leads.
+03) Same parameters as project 2 except using absolute values for SCG and RHC
+waveforms.
