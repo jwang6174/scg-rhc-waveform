@@ -12,4 +12,5 @@ waveforms were being min-max normalized. Consider whether absolute values may
 lead to better results.
 
 03) Same parameters as project 2 except using absolute values for SCG and RHC
-waveforms.
+waveforms. Note that in the future if using relative values, would have to
+account for the maximum values of all segments in both training and test sets.
