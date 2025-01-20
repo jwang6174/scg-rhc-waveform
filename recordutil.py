@@ -35,13 +35,6 @@ class SCGDataset(Dataset):
         tensor = tensor[:, :, :self.segment_size]
     return tensor
 
-  def minmax_norm(self, tensor):
-    """
-    Perform min-max normalization on tensor.
-    """
-    tensor = (tensor - np.min(tensor)) / (np.max(tensor) - np.min(tensor) + 0.0001)
-    return tensor
-
   def invert(self, tensor):
     """
     Invert a tensor.
@@ -59,8 +52,8 @@ class SCGDataset(Dataset):
     Iterate through segments.
     """
     segment = self.segments[index]
-    scg = self.pad(self.invert(self.minmax_norm(segment[0])))
-    rhc = self.pad(self.invert(self.minmax_norm(segment[1])))
+    scg = self.pad(self.invert(segment[0]))
+    rhc = self.pad(self.invert(segment[1]))
     record_name = segment[2]
     start_idx = segment[3]
     stop_idx = segment[4]
