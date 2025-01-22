@@ -20,9 +20,11 @@ class SCGDataset(Dataset):
   """
   Container dataset class SCG and RHC segments.
   """
-  def __init__(self, segments, segment_size):
+  def __init__(self, segments, segment_size, min_val, max_val):
     self.segments = segments
     self.segment_size = int(segment_size * SAMPLE_FREQ)
+    self.min_val = min_val
+    self.max_val = max_val
 
   def pad(self, tensor):
     """
@@ -33,6 +35,13 @@ class SCGDataset(Dataset):
         tensor = torch.nn.functional.pad(tensor, (0, padding))
     elif tensor.shape[-1] > self.segment_size:
         tensor = tensor[:, :, :self.segment_size]
+    return tensor
+
+  def minmax_norm(self, tensor):
+    """
+    Perform min-max normalization on tensor.
+    """
+    tensor = (tensor - min_val) / (max_val - min_val + 0.0001)
     return tensor
 
   def invert(self, tensor):
@@ -52,8 +61,8 @@ class SCGDataset(Dataset):
     Iterate through segments.
     """
     segment = self.segments[index]
-    scg = self.pad(self.invert(segment[0]))
-    rhc = self.pad(self.invert(segment[1]))
+    scg = self.pad(self.invert(self.minmax_norm(segment[0])))
+    rhc = self.pad(self.invert(self.minmax_norm(segment[1])))
     record_name = segment[2]
     start_idx = segment[3]
     stop_idx = segment[4]
@@ -127,16 +136,34 @@ def get_segments(in_channels, segment_size, chamber, record_name=None):
     return segments
 
 
+def get_min_max_vals(segments):
+  """
+  Get min and max values for normalization.
+  """
+  min_val = 0
+  max_val = 0
+  for segment in segments:
+    min_scg = np.min(segment[0])
+    max_scg = np.max(segment[0])
+    min_rhc = np.min(segment[1])
+    max_rhc = np.max(segment[1])
+    min_val = min([min_val, min_scg, min_rhc])
+    max_val = max([max_val, max_scg, max_rhc])
+  return min_val, max_val
+
+
 def save_dataloaders(params):
   """
   Get training and test segments, then save as torch DataLoader objects.
   """
   all_segments = get_segments(params.in_channels, params.segment_size, params.chamber)
+  
+  min_val, max_val = get_min_max_vals(all_segments)
 
   train_segments, test_segments = train_test_split(all_segments, train_size=0.9)
 
-  train_set = SCGDataset(train_segments, params.segment_size)
-  test_set = SCGDataset(test_segments, params.segment_size)
+  train_set = SCGDataset(train_segments, params.segment_size, min_val, max_val)
+  test_set = SCGDataset(test_segments, params.segment_size, min_val, max_val)
 
   train_loader = DataLoader(train_set, batch_size=params.batch_size, shuffle=True)
   test_loader = DataLoader(test_set, batch_size=1, shuffle=True)
@@ -157,7 +184,7 @@ def load_dataloader(path):
 
 
 if __name__ == '__main__':
-  path = '02_waveform/params.json'
+  path = '04_waveform/params.json'
   print(f'Running recordutil for {path}')
   params = Params(path)
   save_dataloaders(params)
