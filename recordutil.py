@@ -41,7 +41,7 @@ class SCGDataset(Dataset):
     """
     Perform min-max normalization on tensor.
     """
-    tensor = (tensor - min_val) / (max_val - min_val + 0.0001)
+    tensor = (tensor - self.min_val) / (self.max_val - self.min_val + 0.0001)
     return tensor
 
   def invert(self, tensor):
