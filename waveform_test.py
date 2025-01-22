@@ -39,7 +39,7 @@ def save_top_pred_plots(params, generator, sorted_comparisons, num_plots):
   """
   Save most similar predicted RHC plots.
   """
-  for i, comparison in enumerate(sorted_comparisons, start=1)[:num_plots]:
+  for i, comparison in enumerate(sorted_comparisons[:num_plots], start=1):
     dtw = comparison['dtw']
     filename = comparison['filename']
     start_idx = comparison['start_idx']
@@ -116,6 +116,6 @@ def run(params, checkpoint):
 
 
 if __name__ == '__main__':
-  params = Params('02_waveform/params.json')
-  run(params, '999.checkpoint')
+  params = Params('03_waveform/params.json')
+  run(params, '162.checkpoint')
 
