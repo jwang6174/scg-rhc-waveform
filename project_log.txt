@@ -17,4 +17,6 @@ account for the maximum values of all segments in both training and test sets.
 This experiment was aborted early due to large, unstable gradients.
 
 04) Same parameters as project 2 except using correctly minmax normalized values
-across the entire dataset with respect to separate SCG and RHC channels.
+across the entire dataset with respect to separate SCG and RHC channels. Also
+does not appear to give stable gradients. Overall the best performance is with
+minmax normalization on individual segments.
