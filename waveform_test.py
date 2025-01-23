@@ -88,7 +88,7 @@ def get_waveform_comparisons(generator, loader):
   return comparisons
 
 
-def run(params, checkpoint):
+def run(params, checkpoint_path):
   """
   Run tests.
   """ 
