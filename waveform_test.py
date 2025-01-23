@@ -16,7 +16,7 @@ from torch.utils.data import DataLoader
 from waveform_train import Generator, SCGDataset
 
 
-def save_random_pred_plots(dirpath, generator, loader, num_plots):
+def save_random_pred_plots(dirpath, generator, loader, prefix, num_plots):
   """
   Save a certain number of predicted vs real RHC plots.
   """
@@ -29,7 +29,7 @@ def save_random_pred_plots(dirpath, generator, loader, num_plots):
     plt.xlabel('Sample')
     plt.ylabel('mmHg')
     plt.legend()
-    plt.savefig(os.path.join(dirpath, f'random_pred_plot_{timestamp}_{i}.png'))
+    plt.savefig(os.path.join(dirpath, f'random_pred_plot_{prefix}_{timestamp}_{i}.png'))
     plt.close()
     if i == num_plots:
       break
@@ -95,6 +95,9 @@ def run(params, checkpoint):
   with open(params.train_path, 'rb') as f:
     train_loader = pickle.load(f)
 
+  with open(params.valid_path, 'rb') as f:
+    valid_loader = pickle.load(f)
+
   with open(params.test_path, 'rb') as f:
     test_loader = pickle.load(f)
 
@@ -103,8 +106,9 @@ def run(params, checkpoint):
   generator.load_state_dict(checkpoint['g_state_dict'])
   generator.eval()
 
-  save_random_pred_plots(params.pred_rand_dir_path, generator, train_loader, num_plots=5)
-  save_random_pred_plots(params.pred_rand_dir_path, generator, test_loader, num_plots=5)
+  save_random_pred_plots(params.pred_rand_dir_path, generator, train_loader, 'train', num_plots=5)
+  save_random_pred_plots(params.pred_rand_dir_path, generator, valid_loader, 'valid', num_plots=5)
+  save_random_pred_plots(params.pred_rand_dir_path, generator, test_loader, 'test', num_plots=5)
   
   # comparisons = get_waveform_comparisons(generator, test_loader)
   # comparisons.sort(key=lambda x: x['dtw'])
