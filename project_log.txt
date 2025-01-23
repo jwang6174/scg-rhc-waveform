@@ -15,3 +15,6 @@ lead to better results.
 waveforms. Note that in the future if using relative values, would have to
 account for the maximum values of all segments in both training and test sets.
 This experiment was aborted early due to large, unstable gradients.
+
+04) Same parameters as project 2 except using correctly minmax normalized values
+across the entire dataset with respect to separate SCG and RHC channels.
