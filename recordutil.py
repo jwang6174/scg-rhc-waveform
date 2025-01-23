@@ -20,11 +20,11 @@ class SCGDataset(Dataset):
   """
   Container dataset class SCG and RHC segments.
   """
-  def __init__(self, segments, segment_size, min_val, max_val):
+  def __init__(self, segments, segment_size, minmax_scg, minmax_rhc):
     self.segments = segments
     self.segment_size = int(segment_size * SAMPLE_FREQ)
-    self.min_val = min_val
-    self.max_val = max_val
+    self.minmax_scg = minmax_scg
+    self.minmax_rhc = minmax_rhc
 
   def pad(self, tensor):
     """
@@ -37,11 +37,12 @@ class SCGDataset(Dataset):
         tensor = tensor[:, :, :self.segment_size]
     return tensor
 
-  def minmax_norm(self, tensor):
+  def minmax_norm(self, tensor, minmax_vals):
     """
     Perform min-max normalization on tensor.
     """
-    tensor = (tensor - self.min_val) / (self.max_val - self.min_val + 0.0001)
+    min_val, max_val = minmax_vals
+    tensor = (tensor - min_val) / (max_val - min_val + 0.0001)
     return tensor
 
   def invert(self, tensor):
@@ -61,8 +62,8 @@ class SCGDataset(Dataset):
     Iterate through segments.
     """
     segment = self.segments[index]
-    scg = self.pad(self.invert(self.minmax_norm(segment[0])))
-    rhc = self.pad(self.invert(self.minmax_norm(segment[1])))
+    scg = self.pad(self.invert(self.minmax_norm(segment[0], self.minmax_scg)))
+    rhc = self.pad(self.invert(self.minmax_norm(segment[1], self.minmax_rhc)))
     record_name = segment[2]
     start_idx = segment[3]
     stop_idx = segment[4]
@@ -136,20 +137,24 @@ def get_segments(in_channels, segment_size, chamber, record_name=None):
     return segments
 
 
-def get_min_max_vals(segments):
+def get_minmax_vals(segments):
   """
   Get min and max values for normalization.
   """
-  min_val = 0
-  max_val = 0
+  scg_min = None
+  scg_max = None
+  rhc_min = None
+  rhc_max = None
   for segment in segments:
-    min_scg = np.min(segment[0])
-    max_scg = np.max(segment[0])
-    min_rhc = np.min(segment[1])
-    max_rhc = np.max(segment[1])
-    min_val = min([min_val, min_scg, min_rhc])
-    max_val = max([max_val, max_scg, max_rhc])
-  return min_val, max_val
+    scg_min_seg = np.min(segment[0])
+    scg_max_seg = np.max(segment[0])
+    rhc_min_seg = np.min(segment[1])
+    rhc_max_seg = np.max(segment[1])
+    scg_min = scg_min_seg if scg_min is None else min(scg_min_seg, scg_min)
+    scg_max = scg_max_seg if scg_max is None else max(scg_max_seg, scg_max)
+    rhc_min = rhc_min_seg if rhc_min is None else min(rhc_min_seg, rhc_min)
+    rhc_max = rhc_max_seg if rhc_max is None else max(rhc_max_seg, rhc_max)
+  return (scg_min, scg_max), (rhc_min, rhc_max)
 
 
 def save_dataloaders(params):
@@ -158,12 +163,12 @@ def save_dataloaders(params):
   """
   all_segments = get_segments(params.in_channels, params.segment_size, params.chamber)
   
-  min_val, max_val = get_min_max_vals(all_segments)
+  minmax_scg, minmax_rhc = get_minmax_vals(all_segments)
 
   train_segments, test_segments = train_test_split(all_segments, train_size=0.9)
 
-  train_set = SCGDataset(train_segments, params.segment_size, min_val, max_val)
-  test_set = SCGDataset(test_segments, params.segment_size, min_val, max_val)
+  train_set = SCGDataset(train_segments, params.segment_size, minmax_scg, minmax_rhc)
+  test_set = SCGDataset(test_segments, params.segment_size, minmax_scg, minmax_rhc)
 
   train_loader = DataLoader(train_set, batch_size=params.batch_size, shuffle=True)
   test_loader = DataLoader(test_set, batch_size=1, shuffle=True)
@@ -173,7 +178,6 @@ def save_dataloaders(params):
   
   with open(params.test_path, 'wb') as f:
     pickle.dump(test_loader, f)
-
 
 def load_dataloader(path):
   """
