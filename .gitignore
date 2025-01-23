@@ -218,3 +218,5 @@ pred_rand/
 *.pth
 *.csv
 *.checkpoint
+
+record_log.txt
