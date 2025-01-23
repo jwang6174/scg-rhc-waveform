@@ -3,7 +3,7 @@
   "in_channels": ["patch_ACC_lat", "patch_ACC_hf"],
   "chamber": "PA",
   "segment_size": 1.5,
-  "batch_size": 16,
+  "batch_size": 4,
   "train_path": "loader_train.pickle",
   "valid_path": "loader_valid.pickle",
   "test_path": "loader_test.pickle",
