@@ -101,7 +101,7 @@ def run(params, checkpoint_path):
   with open(params.test_path, 'rb') as f:
     test_loader = pickle.load(f)
 
-  checkpoint = torch.load(os.path.join(params.checkpoint_dir_path, checkpoint), weights_only=False)
+  checkpoint = torch.load(os.path.join(params.checkpoint_dir_path, checkpoint_path), weights_only=False)
   generator = Generator(len(params.in_channels))
   generator.load_state_dict(checkpoint['g_state_dict'])
   generator.eval()
