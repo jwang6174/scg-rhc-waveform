@@ -386,7 +386,7 @@ def run(params):
         plt.plot(d_losses, label='Discriminator Loss')
         plt.xlabel('Iteration')
         plt.ylabel('Loss')
-        plt.ylim(0, 200)
+        plt.ylim(0, 50)
         plt.legend()
         plt.savefig(losses_fig_path)
         plt.close()
