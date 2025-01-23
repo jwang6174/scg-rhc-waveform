@@ -165,19 +165,32 @@ def save_dataloaders(params):
   
   minmax_scg, minmax_rhc = get_minmax_vals(all_segments)
 
-  train_segments, test_segments = train_test_split(all_segments, train_size=0.9)
+  train_segments, nontrain_segments = train_test_split(all_segments, train_size=0.9)
+  valid_segments, test_segments = train_test_split(nontrain_segments, train_size=0.5)
 
   train_set = SCGDataset(train_segments, params.segment_size, minmax_scg, minmax_rhc)
+  valid_set = SCGDataset(valid_segments, params.segment_size, minmax_scg, minmax_rhc)
   test_set = SCGDataset(test_segments, params.segment_size, minmax_scg, minmax_rhc)
 
   train_loader = DataLoader(train_set, batch_size=params.batch_size, shuffle=True)
+  valid_loader = DataLoader(valid_set, batch_size=1, shuffle=True)
   test_loader = DataLoader(test_set, batch_size=1, shuffle=True)
   
   with open(params.train_path, 'wb') as f:
     pickle.dump(train_loader, f)
+
+  with open(params.valid_path, 'wb') as f:
+    pickle.dump(valid_loader, f)
   
   with open(params.test_path, 'wb') as f:
     pickle.dump(test_loader, f)
+
+  with open(os.path.join(params.dir_path, 'record_log.txt'), 'w') as f:
+    f.write(f'Dataset created: {datetime.now()}\n')
+    f.write(f'All segments: {len(all_segments)}\n')
+    f.write(f'Valid segments: {len(valid_segments)}\n')
+    f.write(f'Train segments: {len(train_segments)}\n')
+    f.write(f'Test segments: {len(test_segments)}\n')
 
 def load_dataloader(path):
   """

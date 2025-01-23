@@ -39,8 +39,16 @@ def is_straight_line(waveform):
   return r_squared > 0.8
 
 
+def has_non_pos_val(waveform):
+  for val in waveform:
+    if val <= -3:
+      return True
+  return False
+
+
 def has_noise(waveform):
   return (
     len(get_flat_lines(waveform)) > 0 or
-    is_straight_line(waveform)
+    is_straight_line(waveform) or
+    has_non_pos_val(waveform)
   )
