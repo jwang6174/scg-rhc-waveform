@@ -386,6 +386,7 @@ def run(params):
         plt.plot(d_losses, label='Discriminator Loss')
         plt.xlabel('Iteration')
         plt.ylabel('Loss')
+        plt.ylim(0, 200)
         plt.legend()
         plt.savefig(losses_fig_path)
         plt.close()
@@ -405,6 +406,6 @@ def run(params):
     epoch += 1
 
 if __name__ == '__main__':
-  path = '03_waveform/params.json'
+  path = '04_waveform/params.json'
   print(timelog(f'Starting waveform training with {path}', time()))
   run(Params(path))
