@@ -29,7 +29,7 @@ def save_random_pred_plots(dirpath, generator, loader, prefix, num_plots):
     plt.xlabel('Sample')
     plt.ylabel('mmHg')
     plt.legend()
-    plt.savefig(os.path.join(dirpath, f'random_pred_plot_{prefix}_{timestamp}_{i}.png'))
+    plt.savefig(os.path.join(dirpath, f'random_pred_plot_{timestamp}_{prefix}_{i}.png'))
     plt.close()
     if i == num_plots:
       break
@@ -119,5 +119,5 @@ def run(params, checkpoint_path):
 
 if __name__ == '__main__':
   params = Params('04_waveform/params.json')
-  run(params, '000.checkpoint')
+  run(params, '480.checkpoint')
 
