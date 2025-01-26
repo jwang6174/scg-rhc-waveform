@@ -12,5 +12,6 @@ for name in get_record_names():
     rhc_channel = record.p_signal[:, rhc_index]
     rhc_vals.extend(rhc_channel)
 
-plt.hist(rhc_vals)
+plt.hist(rhc_vals, bins=20)
 plt.savefig('rhc_histo.png')
+plt.close()
