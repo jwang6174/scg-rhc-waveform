@@ -41,7 +41,7 @@ def is_straight_line(waveform):
 
 def has_non_pos_val(waveform):
   for val in waveform:
-    if val <= -3:
+    if val <= -10:
       return True
   return False
 
