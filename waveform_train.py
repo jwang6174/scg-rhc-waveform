@@ -351,7 +351,10 @@ def run(params):
   d_loss_total = sum(d_losses)
 
   while epoch < total_epochs:
-    for i, (scg, rhc, filename, start_idx, stop_idx) in enumerate(train_loader):
+    for i, segment in enumerate(train_loader):
+      scg = segment[0]
+      rhc = segment[1]
+
       scg = scg.to(device)
       rhc = rhc.to(device)
       
@@ -386,7 +389,7 @@ def run(params):
         plt.plot(d_losses, label='Discriminator Loss')
         plt.xlabel('Iteration')
         plt.ylabel('Loss')
-        plt.ylim(0, 50)
+        plt.ylim(0, 100)
         plt.legend()
         plt.savefig(losses_fig_path)
         plt.close()
@@ -406,6 +409,7 @@ def run(params):
     epoch += 1
 
 if __name__ == '__main__':
-  path = '05_waveform/params.json'
+  with open('active_project.txt', 'r') as f:
+    path = f.readline().strip('\n')
   print(timelog(f'Starting waveform training with {path}', time()))
   run(Params(path))
