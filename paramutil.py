@@ -26,6 +26,8 @@ class Params:
     self.lambda_gp = self.data['lambda_gp']
     self.lambda_aux = self.data['lambda_aux']
     self.total_epochs = self.data['total_epochs']
+    self.min_RHC = self.data['min_RHC']
+    self.use_global_min_max = self.data['use_global_min_max']
 
   def init_json(self, path):
     with open(path, 'r') as f:

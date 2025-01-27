@@ -41,7 +41,6 @@ class SCGDataset(Dataset):
     """
     Perform min-max normalization on tensor.
     """
-    min_val, max_val = minmax_vals
     tensor = (tensor - min_val) / (max_val - min_val + 0.0001)
     return tensor
 
@@ -62,6 +61,10 @@ class SCGDataset(Dataset):
     Iterate through segments.
     """
     segment = self.segments[index]
+    if minmax_scg is None:
+      minmax_scg = (np.min(segment[0]), np.max(segment[0]))
+    if minmax_rhc is None:
+      minmax_rhc = (np.min(segment[1]), np.max(segment[1]))
     scg = self.pad(self.invert(self.minmax_norm(segment[0], self.minmax_scg)))
     rhc = self.pad(self.invert(self.minmax_norm(segment[1], self.minmax_rhc)))
     record_name = segment[2]
@@ -110,14 +113,17 @@ def get_channels(record, channel_names, start_idx, stop_idx):
   return channels
 
    
-def get_segments(in_channels, segment_size, chamber, record_name=None):
+def get_segments(params, record_name=None):
   """
   Get segments of a given size with the specified SCG channels.
   """
+  in_channels = params.in_channels
+  segment_size = params.segment_size
+  chamber = params.chamber
   if record_name is None:
     segments = []
     for record_name in get_record_names():
-      segments.extend(get_segments(in_channels, segment_size, chamber, record_name=record_name))
+      segments.extend(get_segments(params, record_name=record_name))
     return segments
   else:
     segments = []
@@ -132,12 +138,12 @@ def get_segments(in_channels, segment_size, chamber, record_name=None):
         stop_idx = start_idx + segment_size
         scg_segment = scg_signal[start_idx:stop_idx]
         rhc_segment = rhc_signal[start_idx:stop_idx]
-        if not has_noise(rhc_segment[:, 0]):
+        if not has_noise(params, rhc_segment[:, 0]):
           segments.append((scg_segment, rhc_segment, record_name, start_idx, stop_idx))
     return segments
 
 
-def get_minmax_vals(segments):
+def get_global_minmax_vals(segments):
   """
   Get min and max values for normalization.
   """
@@ -161,9 +167,13 @@ def save_dataloaders(params):
   """
   Get training and test segments, then save as torch DataLoader objects.
   """
-  all_segments = get_segments(params.in_channels, params.segment_size, params.chamber)
-  
-  minmax_scg, minmax_rhc = get_minmax_vals(all_segments)
+  all_segments = get_segments(params)
+
+  if params.use_global_min_max:
+    minmax_scg, minmax_rhc = get_global_minmax_vals(all_segments)
+  else:
+    minmax_scg = None
+    minmax_rhc = None
 
   train_segments, nontrain_segments = train_test_split(all_segments, train_size=0.9)
   valid_segments, test_segments = train_test_split(nontrain_segments, train_size=0.5)
@@ -175,7 +185,17 @@ def save_dataloaders(params):
   train_loader = DataLoader(train_set, batch_size=params.batch_size, shuffle=True)
   valid_loader = DataLoader(valid_set, batch_size=1, shuffle=True)
   test_loader = DataLoader(test_set, batch_size=1, shuffle=True)
-  
+
+  if os.path.exists(params.train_path):
+    print('Train file already exists!')
+    return
+  elif os.path.exists(params.valid_path):
+    print('Valid file already exists!')
+    return
+  elif os.path.exists(params.test_path):
+    print('Test file already exists!')
+    return
+
   with open(params.train_path, 'wb') as f:
     pickle.dump(train_loader, f)
 
@@ -201,7 +221,7 @@ def load_dataloader(path):
 
 
 if __name__ == '__main__':
-  path = '04_waveform/params.json'
+  path = '06_waveform/params.json'
   print(f'Running recordutil for {path}')
   params = Params(path)
   save_dataloaders(params)

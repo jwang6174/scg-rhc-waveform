@@ -39,16 +39,16 @@ def is_straight_line(waveform):
   return r_squared > 0.8
 
 
-def has_non_pos_val(waveform):
+def in_rhc_range(params, waveform):
   for val in waveform:
-    if val <= -10:
-      return True
-  return False
+    if val < params.min_RHC:
+      return False
+  return True
 
 
-def has_noise(waveform):
+def has_noise(params, waveform):
   return (
     len(get_flat_lines(waveform)) > 0 or
     is_straight_line(waveform) or
-    has_non_pos_val(waveform)
+    not in_rhc_range(params, waveform)
   )
