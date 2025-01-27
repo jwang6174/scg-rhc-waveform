@@ -9,18 +9,20 @@ import matplotlib.pyplot as plt
 from datetime import datetime
 from fastdtw import fastdtw
 from paramutil import Params
-from recordutil import PROCESSED_DATA_PATH
+from recordutil import PROCESSED_DATA_PATH, SCGDataset
 from scipy.spatial.distance import euclidean
 from sklearn.metrics import mean_absolute_error
 from torch.utils.data import DataLoader
-from waveform_train import Generator, SCGDataset
+from waveform_train import Generator, get_last_checkpoint_path
 
 
 def save_random_pred_plots(dirpath, generator, loader, prefix, num_plots):
   """
   Save a certain number of predicted vs real RHC plots.
   """
-  for i, (scg, real_rhc, filename, start_idx, stop_idx) in enumerate(loader, start=1):
+  for i, segment in enumerate(loader, start=1):
+    scg = segment[0]
+    real_rhc = segment[1]
     timestamp = str(datetime.now().strftime('%Y-%m-%d %H-%M-%S')).replace(' ', '_')
     real_rhc = real_rhc.detach().numpy()[0, 0, :]
     pred_rhc = generator(scg).detach().numpy()[0, 0, :]
@@ -88,7 +90,7 @@ def get_waveform_comparisons(generator, loader):
   return comparisons
 
 
-def run(params, checkpoint_path):
+def run(params, checkpoint_path=None):
   """
   Run tests.
   """ 
@@ -100,6 +102,9 @@ def run(params, checkpoint_path):
 
   with open(params.test_path, 'rb') as f:
     test_loader = pickle.load(f)
+
+  if checkpoint_path is None:
+    checkpoint_path = get_last_checkpoint_path(params.checkpoint_dir_path)
 
   checkpoint = torch.load(os.path.join(params.checkpoint_dir_path, checkpoint_path), weights_only=False)
   generator = Generator(len(params.in_channels))
@@ -118,6 +123,8 @@ def run(params, checkpoint_path):
 
 
 if __name__ == '__main__':
-  params = Params('04_waveform/params.json')
-  run(params, '480.checkpoint')
+  with open('active_project.txt', 'r') as f:
+    path = f.readline().strip('\n')
+  params = Params(path)
+  run(params)
 
