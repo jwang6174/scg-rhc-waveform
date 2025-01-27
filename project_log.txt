@@ -8,8 +8,8 @@ the model was attempting to predict RA, RV, and PA waveforms).
 02) Tried to specifically predict PA waveforms. Implemented a smaller batch size 
 of 16, compared to the batch size of 128 used in the original paper, on a hunch 
 that it may provide better predictions. Later realized that SCG and RHC
-waveforms were being min-max normalized. Consider whether absolute values may
-lead to better results.
+waveforms were being min-max normalized, but only with respect to individual
+segemnts. Consider whether absolute values may lead to better results.
 
 03) Same parameters as project 2 except using absolute values for SCG and RHC
 waveforms. Note that in the future if using relative values, would have to
@@ -17,6 +17,11 @@ account for the maximum values of all segments in both training and test sets.
 This experiment was aborted early due to large, unstable gradients.
 
 04) Same parameters as project 2 except using correctly minmax normalized values
-across the entire dataset with respect to separate SCG and RHC channels. Also
-does not appear to give stable gradients. Overall the best performance is with
-minmax normalization on individual segments.
+across the entire dataset with respect to separate SCG and RHC channels, ignored 
+segments containing negative RHC values, and used batch size of 4.
+
+05) Same parameters as project 4 except returned to using batch size of 128 and
+lambda_aux of 500 instead of 100.
+
+06) Return to using minmax normalization relative to each segment rather than
+across all segments. Return to using lambda_aux of 100.
