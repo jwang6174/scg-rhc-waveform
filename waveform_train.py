@@ -374,7 +374,7 @@ def run(params):
       g_loss.backward()
       g_optimizer.step()
 
-      if i > 0 and (i % 100 == 0 or i == len(train_loader) - 1):
+      if i > 0 and (i % 10 == 0 or i == len(train_loader) - 1):
         g_loss_sum = sum(g_losses)
         d_loss_sum = sum(d_losses)
         print(timelog(f'Epoch {epoch}/{total_epochs} | Batch {i}/{len(train_loader)}', start_time))
@@ -406,6 +406,6 @@ def run(params):
     epoch += 1
 
 if __name__ == '__main__':
-  path = '04_waveform/params.json'
+  path = '05_waveform/params.json'
   print(timelog(f'Starting waveform training with {path}', time()))
   run(Params(path))
