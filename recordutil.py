@@ -21,10 +21,8 @@ class SCGDataset(Dataset):
   Container dataset class SCG and RHC segments.
   """
   def __init__(self, segments, segment_size, minmax_scg, minmax_rhc):
-    self.segments = segments
     self.segment_size = int(segment_size * SAMPLE_FREQ)
-    self.minmax_scg = minmax_scg
-    self.minmax_rhc = minmax_rhc
+    self.segments = self.init_segments(segments, minmax_scg, minmax_rhc)
 
   def pad(self, tensor):
     """
@@ -41,6 +39,7 @@ class SCGDataset(Dataset):
     """
     Perform min-max normalization on tensor.
     """
+    min_val, max_val = minmax_vals
     tensor = (tensor - min_val) / (max_val - min_val + 0.0001)
     return tensor
 
@@ -49,6 +48,19 @@ class SCGDataset(Dataset):
     Invert a tensor.
     """
     return torch.tensor(tensor.T, dtype=torch.float32)
+
+  def init_segments(self, segments, minmax_scg, minmax_rhc):
+    for i in range(len(segments)):
+      segment = segments[i]
+      local_minmax_scg = (np.min(segment[0]), np.max(segment[0])) if minmax_scg is None else minmax_scg
+      local_minmax_rhc = (np.min(segment[1]), np.max(segment[1])) if minmax_rhc is None else minmax_rhc
+      scg = self.pad(self.invert(self.minmax_norm(segment[0], local_minmax_scg)))
+      rhc = self.pad(self.invert(self.minmax_norm(segment[1], local_minmax_rhc)))
+      record_name = segment[2]
+      start_idx = segment[3]
+      stop_idx = segment[4]
+      segments[i] = (scg, rhc, record_name, start_idx, stop_idx, local_minmax_scg, local_minmax_rhc)
+    return segments
 
   def __len__(self):
     """
@@ -61,16 +73,7 @@ class SCGDataset(Dataset):
     Iterate through segments.
     """
     segment = self.segments[index]
-    if minmax_scg is None:
-      minmax_scg = (np.min(segment[0]), np.max(segment[0]))
-    if minmax_rhc is None:
-      minmax_rhc = (np.min(segment[1]), np.max(segment[1]))
-    scg = self.pad(self.invert(self.minmax_norm(segment[0], self.minmax_scg)))
-    rhc = self.pad(self.invert(self.minmax_norm(segment[1], self.minmax_rhc)))
-    record_name = segment[2]
-    start_idx = segment[3]
-    stop_idx = segment[4]
-    return scg, rhc, record_name, start_idx, stop_idx
+    return segment
 
 
 def get_record_names():
@@ -221,7 +224,8 @@ def load_dataloader(path):
 
 
 if __name__ == '__main__':
-  path = '06_waveform/params.json'
+  with open('active_project.txt', 'r') as f:
+    path = f.readline().strip('\n')
   print(f'Running recordutil for {path}')
   params = Params(path)
   save_dataloaders(params)
