@@ -65,8 +65,12 @@ def get_waveform_comparisons(generator, loader):
   Get waveform comparions for real and predicted RHC waveforms.
   """
   comparisons = []
-  for i, (scg, real_rhc, filename, start_idx, stop_idx) in enumerate(loader, start=1):
-    filename = filename[0]
+  for i, segment in enumerate(loader, start=1):
+    scg = segment[0]
+    real_rhc = segment[1]
+    filename = segment[2][0]
+    start_idx = segment[3]
+    stop_idx = segment[4]
     x = real_rhc.detach().numpy()[0, 0, :]
     y = generator(scg).detach().numpy()[0, 0, :]
     comparison = {
