@@ -42,7 +42,7 @@ def save_top_pred_plots(params, generator, sorted_comparisons, num_plots):
   Save most similar predicted RHC plots.
   """
   for i, comparison in enumerate(sorted_comparisons[:num_plots], start=1):
-    dtw = comparison['dtw']
+    pcc = comparison['pcc']
     filename = comparison['filename']
     start_idx = comparison['start_idx']
     stop_idx = comparison['stop_idx']
@@ -50,7 +50,7 @@ def save_top_pred_plots(params, generator, sorted_comparisons, num_plots):
     pred_rhc = comparison['pred_rhc']
     plt.plot(pred_rhc, label='Pred RHC')
     plt.plot(real_rhc, label='Real RHC')
-    plt.title(f'DTW: {dtw:.2f}')
+    plt.title(f'PCC: {pcc:.2f}')
     plt.xlabel('Sample')
     plt.ylabel('mmHg')
     plt.legend()
@@ -68,7 +68,7 @@ def get_waveform_comparisons(generator, loader):
   for segment in loader.dataset:
     scg = segment[0].unsqueeze(0)
     real_rhc = segment[1]
-    filename = segment[2][0]
+    filename = segment[2]
     start_idx = segment[3]
     stop_idx = segment[4]
     x = real_rhc.detach().numpy()[0, :]
@@ -79,7 +79,6 @@ def get_waveform_comparisons(generator, loader):
       'stop_idx': int(stop_idx),
       'real_rhc': x,
       'pred_rhc': y,
-      'dtw': fastdtw(np.array([x]), np.array([y]), dist=euclidean)[0],
       'pcc': np.corrcoef(x, y)[0, 1],
       'rmse': np.sqrt(np.mean((y - x) ** 2)),
       'mae': mean_absolute_error(x, y)
@@ -117,8 +116,8 @@ def run(params, checkpoint_path=None):
 
   save_random_pred_plots(params.pred_rand_dir_path, generator, train_loader, 'train', num_plots=5)
   
-  comparisons = get_waveform_comparisons(generator, train_loader)
-  comparisons.sort(key=lambda x: x['dtw'])
+  comparisons = get_waveform_comparisons(generator, valid_loader)
+  comparisons.sort(key=lambda x: x['pcc'], reverse=True)
   comparisons_df = pd.DataFrame(comparisons)
   comparisons_df.to_csv(params.comparisons_path, index=False)
   save_top_pred_plots(params, generator, comparisons, num_plots=100)
