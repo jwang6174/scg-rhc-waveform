@@ -387,6 +387,7 @@ def run(params):
         d_loss_total = d_loss_sum
         plt.plot(g_losses, label='Generator Loss')
         plt.plot(d_losses, label='Discriminator Loss')
+        plt.title(f'Epoch {epoch}/{total_epochs} | Batch {i}/{len(train_loader)}')
         plt.xlabel('Iteration')
         plt.ylabel('Loss')
         plt.ylim(0, 100)
