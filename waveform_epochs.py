@@ -10,48 +10,60 @@ from timelog import timelog
 from waveform_test import get_waveform_comparisons
 from waveform_train import Generator
 
-def run(params):
-  start_time = time()
-  print(timelog(f'Calculating optimal epoch for {params.dir_path}', start_time))
-
-  checkpoint_scores = []
-
-  with open(params.valid_path, 'rb') as f:
-    valid_loader = pickle.load(f)
-  
+def save_checkpoint_scores(params, loader, prefix):
   checkpoint_paths = os.listdir(params.checkpoint_dir_path)
   checkpoint_paths.sort()
 
-  for i, checkpoint_path in enumerate(checkpoint_paths):
-    print(timelog(f'{i}/{len(checkpoint_paths)}', start_time))
-
+  for i, checkpoint_path in enumerate(checkpoint_paths[:50]):
     checkpoint = torch.load(os.path.join(params.checkpoint_dir_path, checkpoint_path), weights_only=False)
+    
     generator = Generator(len(params.in_channels))
     generator.load_state_dict(checkpoint['g_state_dict'])
     generator.eval()
     
-    comparisons = get_waveform_comparisons(generator, valid_loader)
+    comparisons = get_waveform_comparisons(generator, loader)
     comparisons_df = pd.DataFrame(comparisons)
-
+    
     dtw_avg = comparisons_df['dtw'].mean().item()
     dtw_std = comparisons_df['dtw'].std().item()
-
-    checkpoint_scores.append((checkpoint_path, dtw_avg, dtw_std))
+    
+    checkpoint_num = int(checkpoint_path.split('.')[0])
+    checkpoint_scores.append((checkpoint_num, dtw_avg, dtw_std))
   
-  checkpoint_scores.sort(key=lambda x: x[1])
-  checkpoint_df = pd.DataFrame(checkpoint_scores)
-  checkpoint_df.to_csv(params.checkpoint_scores_path, index=False)
+  checkpoint_scores_df = pd.DataFrame(checkpoint_scores)
+  checkpoint_scores_df.to_csv(os.path.join(params.dir_path, f'checkpoint_scores_{prefix}.csv'))
+  
+  return checkpoint_scores
 
-  top_epoch = checkpoint_scores[0]
-  print('Top epoch:', top_epoch)
 
-  x = [int(i[0].split('.')[0]) for i in checkpoint_scores]
-  y = [i[1] for i in checkpoint_scores]
+def run(params):
+  start_time = time()
 
-  plt.scatter(x, y)
+  print(timelog(f'Calculating optimal epoch for {params.dir_path}', start_time))
+  
+  with open(params.train_path, 'rb') as f:
+    train_loader = pickle.load(f)
+
+  with open(params.valid_path, 'rb') as f:
+    valid_loader = pickle.load(f)
+
+  train_scores = save_checkpoint_scores(params, train_loader, 'train')
+  valid_scores = save_checkpoint_scores(params, valid_loader, 'valid')
+
+  train_x = [int(i[0].split('.')[0]) for i in train_scores]
+  train_y = [i[1] for i in train_scores]
+  train_e = [i[2] for i in train_scores]
+
+  valid_x = [int(i[0].split('.')[0]) for i in valid_scores]
+  valid_y = [i[1] for i in valid_scores]
+  valid_e = [i[2] for i in valid_scores]
+
+  plt.errorbar(train_x, train_y, train_e, label='Train')
+  plt.errorbar(valid_x, valid_y, valid_e, label='Valid')
   plt.title('Average DTW Score by Epoch')
   plt.xlabel('Epoch')
   plt.ylabel('Mean DTW')
+  plt.legend()
   plt.savefig('epoch_scores.png')
   plt.close()
 

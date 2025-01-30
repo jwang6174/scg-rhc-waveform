@@ -65,13 +65,13 @@ def get_waveform_comparisons(generator, loader):
   Get waveform comparions for real and predicted RHC waveforms.
   """
   comparisons = []
-  for i, segment in enumerate(loader, start=1):
-    scg = segment[0]
+  for segment in loader.dataset:
+    scg = segment[0].unsqueeze(0)
     real_rhc = segment[1]
     filename = segment[2][0]
     start_idx = segment[3]
     stop_idx = segment[4]
-    x = real_rhc.detach().numpy()[0, 0, :]
+    x = real_rhc.detach().numpy()[0, :]
     y = generator(scg).detach().numpy()[0, 0, :]
     comparison = {
       'filename': filename,
@@ -83,7 +83,7 @@ def get_waveform_comparisons(generator, loader):
       'pcc': np.corrcoef(x, y)[0, 1],
       'rmse': np.sqrt(np.mean((y - x) ** 2)),
       'mae': mean_absolute_error(x, y)
-    }
+      }
     comparisons.append(comparison)
 
   for comparison in comparisons:
@@ -117,7 +117,7 @@ def run(params, checkpoint_path=None):
 
   save_random_pred_plots(params.pred_rand_dir_path, generator, train_loader, 'train', num_plots=5)
   
-  comparisons = get_waveform_comparisons(generator, test_loader)
+  comparisons = get_waveform_comparisons(generator, train_loader)
   comparisons.sort(key=lambda x: x['dtw'])
   comparisons_df = pd.DataFrame(comparisons)
   comparisons_df.to_csv(params.comparisons_path, index=False)
