@@ -118,8 +118,10 @@ def run(params, checkpoint_path=None):
   
   comparisons = get_waveform_comparisons(generator, valid_loader)
   comparisons.sort(key=lambda x: x['pcc'], reverse=True)
+  
   comparisons_df = pd.DataFrame(comparisons)
   comparisons_df.to_csv(params.comparisons_path, index=False)
+  
   save_top_pred_plots(params, generator, comparisons, num_plots=100)
 
 
