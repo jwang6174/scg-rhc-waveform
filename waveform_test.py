@@ -116,14 +116,12 @@ def run(params, checkpoint_path=None):
   generator.eval()
 
   save_random_pred_plots(params.pred_rand_dir_path, generator, train_loader, 'train', num_plots=5)
-  save_random_pred_plots(params.pred_rand_dir_path, generator, valid_loader, 'valid', num_plots=5)
-  save_random_pred_plots(params.pred_rand_dir_path, generator, test_loader, 'test', num_plots=5)
   
-  # comparisons = get_waveform_comparisons(generator, test_loader)
-  # comparisons.sort(key=lambda x: x['dtw'])
-  # comparisons_df = pd.DataFrame(comparisons)
-  # comparisons_df.to_csv(params.comparisons_path, index=False)
-  # save_top_pred_plots(params, generator, comparisons, num_plots=100)
+  comparisons = get_waveform_comparisons(generator, test_loader)
+  comparisons.sort(key=lambda x: x['dtw'])
+  comparisons_df = pd.DataFrame(comparisons)
+  comparisons_df.to_csv(params.comparisons_path, index=False)
+  save_top_pred_plots(params, generator, comparisons, num_plots=100)
 
 
 if __name__ == '__main__':
