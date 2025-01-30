@@ -11,6 +11,8 @@ from waveform_test import get_waveform_comparisons
 from waveform_train import Generator
 
 def save_checkpoint_scores(params, loader, prefix):
+  checkpoint_scores = []
+
   checkpoint_paths = os.listdir(params.checkpoint_dir_path)
   checkpoint_paths.sort()
 
@@ -24,11 +26,11 @@ def save_checkpoint_scores(params, loader, prefix):
     comparisons = get_waveform_comparisons(generator, loader)
     comparisons_df = pd.DataFrame(comparisons)
     
-    dtw_avg = comparisons_df['dtw'].mean().item()
-    dtw_std = comparisons_df['dtw'].std().item()
+    avg = comparisons_df['pcc'].mean().item()
+    std = comparisons_df['pcc'].std().item()
     
     checkpoint_num = int(checkpoint_path.split('.')[0])
-    checkpoint_scores.append((checkpoint_num, dtw_avg, dtw_std))
+    checkpoint_scores.append((checkpoint_num, avg, std))
   
   checkpoint_scores_df = pd.DataFrame(checkpoint_scores)
   checkpoint_scores_df.to_csv(os.path.join(params.dir_path, f'checkpoint_scores_{prefix}.csv'))
@@ -62,7 +64,7 @@ def run(params):
   plt.errorbar(valid_x, valid_y, valid_e, label='Valid')
   plt.title('Average DTW Score by Epoch')
   plt.xlabel('Epoch')
-  plt.ylabel('Mean DTW')
+  plt.ylabel('Mean PCC (Std Dev)')
   plt.legend()
   plt.savefig('epoch_scores.png')
   plt.close()

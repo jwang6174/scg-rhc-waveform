@@ -79,9 +79,7 @@ def get_waveform_comparisons(generator, loader):
       'stop_idx': int(stop_idx),
       'real_rhc': x,
       'pred_rhc': y,
-      'pcc': np.corrcoef(x, y)[0, 1],
-      'rmse': np.sqrt(np.mean((y - x) ** 2)),
-      'mae': mean_absolute_error(x, y)
+      'pcc': np.corrcoef(x, y)[0, 1]
       }
     comparisons.append(comparison)
 
