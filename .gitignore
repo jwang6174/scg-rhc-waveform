@@ -220,3 +220,4 @@ pred_rand/
 *.checkpoint
 
 record_log.txt
+checkpoint_score_max.txt
