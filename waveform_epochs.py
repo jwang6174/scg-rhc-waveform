@@ -27,13 +27,13 @@ def save_checkpoint_scores(params, loader, prefix, start_time):
     comparisons = get_waveform_comparisons(generator, loader)
     comparisons_df = pd.DataFrame(comparisons)
     
-    avg = comparisons_df['pcc'].mean().item()
-    std = comparisons_df['pcc'].std().item()
+    avg = comparisons_df['dtw'].mean().item()
+    std = comparisons_df['dtw'].std().item()
     
     checkpoint_num = int(checkpoint_path.split('.')[0])
     checkpoint_scores.append((checkpoint_num, avg, std))
 
-    print(timelog(f'{prefix} | {i}/{len(checkpoint_paths)} | {avg:.2f} | {std:.2f}', start_time))
+    print(timelog(f'{prefix} | {i}/{len(checkpoint_paths)} | {avg:.2f} ({std:.2f})', start_time))
   
   return checkpoint_scores
 
@@ -53,9 +53,9 @@ def run(params):
   valid_e = [i[2] for i in valid_scores]
 
   plt.errorbar(valid_x, valid_y, valid_e, label='Valid')
-  plt.title('Epoch vs Mean PCC')
+  plt.title('Epoch vs Mean DTW')
   plt.xlabel('Epoch')
-  plt.ylabel('Mean PCC (Std Dev)')
+  plt.ylabel('Mean DTW (SD)')
   plt.legend()
   plt.savefig(os.path.join(params.dir_path, 'checkpoint_scores.png'))
   plt.close()
