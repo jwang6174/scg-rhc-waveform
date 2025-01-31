@@ -410,7 +410,7 @@ def run(params):
     epoch += 1
 
 if __name__ == '__main__':
-  with open('active_project.txt', 'r') as f:
+  with open('project_active.txt', 'r') as f:
     path = f.readline().strip('\n')
   print(timelog(f'Starting waveform training with {path}', time()))
   run(Params(path))

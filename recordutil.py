@@ -224,7 +224,7 @@ def load_dataloader(path):
 
 
 if __name__ == '__main__':
-  with open('active_project.txt', 'r') as f:
+  with open('project_active.txt', 'r') as f:
     path = f.readline().strip('\n')
   print(f'Running recordutil for {path}')
   params = Params(path)
