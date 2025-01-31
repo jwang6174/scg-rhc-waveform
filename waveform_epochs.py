@@ -17,7 +17,6 @@ def save_checkpoint_scores(params, loader, prefix, start_time):
   checkpoint_paths.sort()
 
   for i, checkpoint_path in enumerate(checkpoint_paths):
-    print(timelog(f'{prefix} | {i}/{len(checkpoint_paths)}', start_time))
 
     checkpoint = torch.load(os.path.join(params.checkpoint_dir_path, checkpoint_path), weights_only=False)
     
@@ -33,6 +32,8 @@ def save_checkpoint_scores(params, loader, prefix, start_time):
     
     checkpoint_num = int(checkpoint_path.split('.')[0])
     checkpoint_scores.append((checkpoint_num, avg, std))
+
+    print(timelog(f'{prefix} | {i}/{len(checkpoint_paths)} | {avg:.2f} | {std:.2f}', start_time))
   
   return checkpoint_scores
 
@@ -66,6 +67,7 @@ def run(params):
 
   with open(os.path.join(params.dir_path, 'checkpoint_score_max.txt'), 'w') as f:
     f.write(max_score.to_string())
+
 
 if __name__ == '__main__':
   with open('active_project.txt', 'r') as f:
