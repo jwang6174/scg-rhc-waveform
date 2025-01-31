@@ -30,3 +30,5 @@ across all segments. Return to using lambda_aux of 100.
 patch_ACC_dv), use only patch_ACC_lat and patch_ACC_hf.
 
 08) Use patch_ACC_lat and patch_ACC_dv.
+
+09) Use patch_ACC_hf and patch_ACC_dv.
