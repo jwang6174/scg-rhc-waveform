@@ -221,4 +221,4 @@ pred_rand/
 
 record_log.txt
 checkpoint_score_max.txt
-active_project.txt
+project_active.txt
