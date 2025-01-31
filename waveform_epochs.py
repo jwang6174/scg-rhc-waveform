@@ -16,7 +16,7 @@ def save_checkpoint_scores(params, loader, prefix, start_time):
   checkpoint_paths = os.listdir(params.checkpoint_dir_path)
   checkpoint_paths.sort()
 
-  for i, checkpoint_path in enumerate(checkpoint_paths):
+  for i, checkpoint_path in enumerate(checkpoint_paths[:params.total_epochs]):
 
     checkpoint = torch.load(os.path.join(params.checkpoint_dir_path, checkpoint_path), weights_only=False)
     
@@ -27,8 +27,8 @@ def save_checkpoint_scores(params, loader, prefix, start_time):
     comparisons = get_waveform_comparisons(generator, loader)
     comparisons_df = pd.DataFrame(comparisons)
     
-    avg = comparisons_df['dtw'].mean().item()
-    std = comparisons_df['dtw'].std().item()
+    avg = comparisons_df['pcc'].mean().item()
+    std = comparisons_df['pcc'].std().item()
     
     checkpoint_num = int(checkpoint_path.split('.')[0])
     checkpoint_scores.append((checkpoint_num, avg, std))
@@ -53,9 +53,9 @@ def run(params):
   valid_e = [i[2] for i in valid_scores]
 
   plt.errorbar(valid_x, valid_y, valid_e, label='Valid')
-  plt.title('Epoch vs Mean DTW')
+  plt.title('Epoch vs Mean Score')
   plt.xlabel('Epoch')
-  plt.ylabel('Mean DTW (SD)')
+  plt.ylabel('Mean Score (SD)')
   plt.legend()
   plt.savefig(os.path.join(params.dir_path, 'checkpoint_scores.png'))
   plt.close()
@@ -63,13 +63,13 @@ def run(params):
   valid_scores_df = pd.DataFrame(valid_scores, columns=['checkpoint', 'score', 'std'])
   valid_scores_df.to_csv(os.path.join(params.dir_path, f'checkpoint_scores.csv'), index=False)
 
-  max_score = valid_scores_df.loc[valid_scores_df['score'].idxmax()]
+  best_score = valid_scores_df.loc[valid_scores_df['score'].idxmax()]
 
-  with open(os.path.join(params.dir_path, 'checkpoint_score_max.txt'), 'w') as f:
-    f.write(max_score.to_string())
+  with open(os.path.join(params.dir_path, 'checkpoint_best.txt'), 'w') as f:
+    f.write(best_score.to_string())
 
 
 if __name__ == '__main__':
-  with open('active_project.txt', 'r') as f:
+  with open('project_active.txt', 'r') as f:
     path = f.readline().strip('\n')
   run(Params(path))

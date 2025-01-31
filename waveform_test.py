@@ -7,7 +7,6 @@ import pickle
 import torch
 import matplotlib.pyplot as plt
 from datetime import datetime
-from fastdtw import fastdtw
 from paramutil import Params
 from recordutil import PROCESSED_DATA_PATH, SCGDataset
 from scipy.spatial.distance import euclidean
@@ -79,7 +78,6 @@ def get_waveform_comparisons(generator, loader):
       'stop_idx': int(stop_idx),
       'real_rhc': x,
       'pred_rhc': y,
-      'dtw': fastdtw(np.array([x]), np.array([y]), dist=euclidean)[0],
       'pcc': np.corrcoef(x, y)[0, 1]
       }
     comparisons.append(comparison)
@@ -116,7 +114,7 @@ def run(params, checkpoint_path=None):
   save_random_pred_plots(params.pred_rand_dir_path, generator, train_loader, 'train', num_plots=5)
   
   comparisons = get_waveform_comparisons(generator, valid_loader)
-  comparisons.sort(key=lambda x: x['dtw'])
+  comparisons.sort(key=lambda x: x['pcc'], reverse=True)
   
   comparisons_df = pd.DataFrame(comparisons)
   comparisons_df.to_csv(params.comparisons_path, index=False)
@@ -125,7 +123,7 @@ def run(params, checkpoint_path=None):
 
 
 if __name__ == '__main__':
-  with open('active_project.txt', 'r') as f:
+  with open('project_active.txt', 'r') as f:
     path = f.readline().strip('\n')
   params = Params(path)
   run(params)
