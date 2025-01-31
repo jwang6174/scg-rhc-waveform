@@ -18,7 +18,7 @@
   "n_critic": 2,
   "lambda_gp": 10,
   "lambda_aux": 100,
-  "total_epochs": 1000,
+  "total_epochs": 250,
   "min_RHC": -50,
   "use_global_min_max": false
 }
