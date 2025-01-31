@@ -34,9 +34,6 @@ def save_checkpoint_scores(params, loader, prefix, start_time):
     checkpoint_num = int(checkpoint_path.split('.')[0])
     checkpoint_scores.append((checkpoint_num, avg, std))
   
-  checkpoint_scores_df = pd.DataFrame(checkpoint_scores)
-  checkpoint_scores_df.to_csv(os.path.join(params.dir_path, f'checkpoint_scores_{prefix}.csv'))
-  
   return checkpoint_scores
 
 
@@ -55,12 +52,20 @@ def run(params):
   valid_e = [i[2] for i in valid_scores]
 
   plt.errorbar(valid_x, valid_y, valid_e, label='Valid')
-  plt.title('Average DTW Score by Epoch')
+  plt.title('Epoch vs Mean PCC')
   plt.xlabel('Epoch')
   plt.ylabel('Mean PCC (Std Dev)')
   plt.legend()
-  plt.savefig(os.path.join(params.dir_path, 'epoch_scores.png'))
+  plt.savefig(os.path.join(params.dir_path, 'checkpoint_scores.png'))
   plt.close()
+  
+  valid_scores_df = pd.DataFrame(valid_scores, columns=['checkpoint', 'score', 'std'])
+  valid_scores_df.to_csv(os.path.join(params.dir_path, f'checkpoint_scores.csv'), index=False)
+
+  max_score = valid_scores_df.loc[valid_scores_df['score'].idxmax()]
+
+  with open(os.path.join(params.dir_path, 'checkpoint_score_max.txt'), 'w') as f:
+    f.write(max_score.to_string())
 
 if __name__ == '__main__':
   with open('active_project.txt', 'r') as f:
