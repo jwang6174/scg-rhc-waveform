@@ -309,8 +309,8 @@ def run(params):
   lambda_aux = params.lambda_aux
   total_epochs = params.total_epochs
   train_path = params.train_path
+  dir_path = params.dir_path
   checkpoint_dir_path = params.checkpoint_dir_path
-  losses_fig_path = params.losses_fig_path
   print(timelog('Loaded params', time()))
 
   train_loader = load_dataloader(train_path)
@@ -392,7 +392,7 @@ def run(params):
         plt.ylabel('Loss')
         plt.ylim(0, 100)
         plt.legend()
-        plt.savefig(losses_fig_path)
+        plt.savefig(os.path.join(dir_path, 'train_losses.png'))
         plt.close()
       
     checkpoint = {

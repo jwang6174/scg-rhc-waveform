@@ -117,7 +117,7 @@ def run(params, checkpoint_path=None):
   comparisons.sort(key=lambda x: x['pcc'], reverse=True)
   
   comparisons_df = pd.DataFrame(comparisons)
-  comparisons_df.to_csv(params.comparisons_path, index=False)
+  comparisons_df.to_csv(os.path.join(params.dir_path, 'comparisons.csv'), index=False)
   
   save_top_pred_plots(params, generator, comparisons, num_plots=100)
 

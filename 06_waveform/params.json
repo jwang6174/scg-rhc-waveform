@@ -8,8 +8,6 @@
   "valid_path": "loader_valid.pickle",
   "test_path": "loader_test.pickle",
   "checkpoint_dir_path": "checkpoints",
-  "losses_fig_path": "train_losses.png",
-  "comparisons_path": "comparisons.csv",
   "pred_top_dir_path": "pred_top",
   "pred_rand_dir_path": "pred_rand",
   "alpha": 0.0001,
