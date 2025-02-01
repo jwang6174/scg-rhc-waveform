@@ -1,12 +1,15 @@
 import json
 import os
 import pandas as pd
+import wfdb
 from pathutil import PROCESSED_DATA_PATH
 from recordutil import get_record_names, get_segments
 
+record_names = get_record_names()
+
 jsons = []
-for filename in get_record_names(PROCESSED_DATA_PATH):
-  path = os.path.join(PROCESSED_DATA_PATH, f'{filename}.json')
+for record_name in record_names:
+  path = os.path.join(PROCESSED_DATA_PATH, f'{record_name}.json')
   with open(path, 'r') as f:
     jsons.append(json.load(f))
 df = pd.DataFrame(jsons)
@@ -62,4 +65,11 @@ print("Fine alignment")
 print(f"  Yes {df['fine_alignment'].value_counts().get(True)}")
 print(f"  No {df['fine_alignment'].value_counts().get(False)}")
 
+sigs = {}
+for record_name in record_names:
+  record = wfdb.rdrecord(os.path.join(PROCESSED_DATA_PATH, record_name))
+  for sig in record.sig_name:
+    sigs[sig] = sigs.get(sig, 0) + 1
 
+for sig, count in sigs.items():
+   print(f'{sig}: {count}')
