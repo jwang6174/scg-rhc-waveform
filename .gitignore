@@ -220,5 +220,5 @@ pred_rand/
 *.checkpoint
 
 record_log.txt
-checkpoint_score_max.txt
+checkpoint_best.txt
 project_active.txt
