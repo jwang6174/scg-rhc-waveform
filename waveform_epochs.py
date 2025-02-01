@@ -33,7 +33,7 @@ def save_checkpoint_scores(params, loader, prefix, start_time):
     checkpoint_num = int(checkpoint_path.split('.')[0])
     checkpoint_scores.append((checkpoint_num, avg, std))
 
-    print(timelog(f'{prefix} | {i}/{len(checkpoint_paths)} | {avg:.2f} ({std:.2f})', start_time))
+    print(timelog(f'{prefix} | {i}/{len(checkpoint_paths)} | {avg:.3f} ({std:.3f})', start_time))
   
   return checkpoint_scores
 
