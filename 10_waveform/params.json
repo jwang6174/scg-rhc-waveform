@@ -1,6 +1,6 @@
 {
-  "dir_path": "09_waveform",
-  "in_channels": ["patch_ACC_hf", "patch_ACC_dv"],
+  "dir_path": "10_waveform",
+  "in_channels": ["patch_ACC_lat", "patch_ACC_hf", "patch_ACC_dv", "patch_ECG"],
   "chamber": "PA",
   "segment_size": 1.5,
   "batch_size": 64,
