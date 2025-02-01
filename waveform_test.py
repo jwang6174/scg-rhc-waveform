@@ -93,7 +93,9 @@ def get_waveform_comparisons(generator, loader):
 def run(params, checkpoint_path=None):
   """
   Run tests.
-  """ 
+  """
+  print(f'Running waveform test for {params.dir_path} ({checkpoint_path})')
+
   with open(params.train_path, 'rb') as f:
     train_loader = pickle.load(f)
 
@@ -113,18 +115,18 @@ def run(params, checkpoint_path=None):
 
   save_random_pred_plots(params.pred_rand_dir_path, generator, train_loader, 'train', num_plots=5)
   
-  comparisons = get_waveform_comparisons(generator, valid_loader)
+  comparisons = get_waveform_comparisons(generator, test_loader)
   comparisons.sort(key=lambda x: x['pcc'], reverse=True)
   
   comparisons_df = pd.DataFrame(comparisons)
   comparisons_df.to_csv(os.path.join(params.dir_path, 'comparisons.csv'), index=False)
   
-  save_top_pred_plots(params, generator, comparisons, num_plots=100)
+  save_top_pred_plots(params, generator, comparisons, num_plots=-1)
 
 
 if __name__ == '__main__':
   with open('project_active.txt', 'r') as f:
     path = f.readline().strip('\n')
   params = Params(path)
-  run(params)
+  run(params, checkpoint_path='225.checkpoint')
 
