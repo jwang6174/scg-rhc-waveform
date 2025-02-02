@@ -9,8 +9,7 @@ import matplotlib.pyplot as plt
 from datetime import datetime
 from paramutil import Params
 from recordutil import PROCESSED_DATA_PATH, SCGDataset
-from scipy.spatial.distance import euclidean
-from sklearn.metrics import mean_absolute_error
+from scipy.stats import pearsonr
 from torch.utils.data import DataLoader
 from waveform_train import Generator, get_last_checkpoint_path
 
@@ -42,7 +41,8 @@ def save_top_pred_plots(params, generator, sorted_comparisons, num_plots):
   Save most similar predicted RHC plots.
   """
   for i, comparison in enumerate(sorted_comparisons[:num_plots], start=1):
-    pcc = comparison['pcc']
+    pcc_r = comparison['pcc_r']
+    pcc_p = comparison['pcc_p']
     filename = comparison['filename']
     start_idx = comparison['start_idx']
     stop_idx = comparison['stop_idx']
@@ -50,7 +50,7 @@ def save_top_pred_plots(params, generator, sorted_comparisons, num_plots):
     pred_rhc = comparison['pred_rhc']
     plt.plot(pred_rhc, label='Pred RHC')
     plt.plot(real_rhc, label='Real RHC')
-    plt.title(f'PCC: {pcc:.2f}')
+    plt.title(f'{pcc_r:.3f}, {pcc_p:.3f}')
     plt.xlabel('Sample')
     plt.ylabel('mmHg')
     plt.legend()
@@ -73,13 +73,15 @@ def get_waveform_comparisons(generator, loader):
     stop_idx = segment[4]
     x = real_rhc.detach().numpy()[0, :]
     y = generator(scg).detach().numpy()[0, 0, :]
+    pcc_r, pcc_p = pearsonr(x, y)
     comparison = {
       'filename': filename,
       'start_idx': int(start_idx),
       'stop_idx': int(stop_idx),
       'real_rhc': x,
       'pred_rhc': y,
-      'pcc': np.corrcoef(x, y)[0, 1]
+      'pcc_r': pcc_r,
+      'pcc_p': pcc_p,
       }
     comparisons.append(comparison)
 
@@ -123,7 +125,7 @@ def run(params, checkpoint_path=None):
   save_random_pred_plots(params, generator, train_loader, 'train', num_plots=5)
   
   comparisons = get_waveform_comparisons(generator, test_loader)
-  comparisons.sort(key=lambda x: x['pcc'], reverse=True)
+  comparisons.sort(key=lambda x: x['pcc_p'], reverse=True)
   
   comparisons_df = pd.DataFrame(comparisons)
   comparisons_df.to_csv(os.path.join(params.dir_path, 'comparisons.csv'), index=False)
