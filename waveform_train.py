@@ -313,6 +313,9 @@ def run(params):
   checkpoint_dir_path = params.checkpoint_dir_path
   print(timelog('Loaded params', time()))
 
+  if not os.path.exists(checkpoint_dir_path):
+    os.makedirs(checkpoint_dir_path)
+
   train_loader = load_dataloader(train_path)
   print(timelog('Loaded training set', time()))
   
