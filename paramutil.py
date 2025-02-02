@@ -15,6 +15,7 @@ class Params:
     self.valid_path = os.path.join(self.dir_path, self.data['valid_path'])
     self.test_path = os.path.join(self.dir_path, self.data['test_path'])
     self.checkpoint_dir_path = os.path.join(self.dir_path, self.data['checkpoint_dir_path'])
+    self.comparison_dir_path = os.path.join(self.dir_path, self.data['comparison_dir_path'])
     self.pred_top_dir_path = os.path.join(self.dir_path, self.data['pred_top_dir_path'])
     self.pred_rand_dir_path = os.path.join(self.dir_path, self.data['pred_rand_dir_path'])
     self.alpha = self.data['alpha']
