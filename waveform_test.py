@@ -10,11 +10,13 @@ from datetime import datetime
 from paramutil import Params
 from recordutil import PROCESSED_DATA_PATH, SCGDataset
 from scipy.stats import pearsonr
+from time import time
+from timelog import timelog
 from torch.utils.data import DataLoader
 from waveform_train import Generator, get_last_checkpoint_path
 
 
-def save_random_pred_plots(params, generator, loader, prefix, num_plots):
+def save_pred_rand_plots(dirpath, generator, loader, prefix, num_plots):
   """
   Save a certain number of predicted vs real RHC plots.
   """
@@ -30,17 +32,17 @@ def save_random_pred_plots(params, generator, loader, prefix, num_plots):
     plt.ylabel('mmHg')
     plt.legend()
     plot_name = f'random_pred_plot_{timestamp}_{prefix}_{i}.png'
-    plt.savefig(os.path.join(params.pred_rand_dir_path, plot_name))
+    plt.savefig(os.path.join(dirpath, plot_name))
     plt.close()
     if i == num_plots:
       break
 
 
-def save_top_pred_plots(params, generator, sorted_comparisons, num_plots):
+def save_pred_top_plots(dirpath, generator, sorted_comparisons):
   """
   Save most similar predicted RHC plots.
   """
-  for i, comparison in enumerate(sorted_comparisons[:num_plots], start=1):
+  for i, comparison in enumerate(sorted_comparisons, start=1):
     pcc_r = comparison['pcc_r']
     pcc_p = comparison['pcc_p']
     filename = comparison['filename']
@@ -55,7 +57,7 @@ def save_top_pred_plots(params, generator, sorted_comparisons, num_plots):
     plt.ylabel('mmHg')
     plt.legend()
     plot_name = f'top_pred_plot_{i:03d}_{filename}_{start_idx}-{stop_idx}'
-    plot_path = os.path.join(params.pred_top_dir_path, plot_name)
+    plot_path = os.path.join(dirpath, plot_name)
     plt.savefig(plot_path)
     plt.close()
 
@@ -93,51 +95,72 @@ def get_waveform_comparisons(generator, loader):
   return comparisons
 
 
-def run(params, checkpoint_path=None):
+def run(params, loader_type, checkpoint_path=None):
   """
   Run tests.
   """
-  print(f"Running waveform test for {params.dir_path} ({checkpoint_path if checkpoint_path else 'last checkpoint'})")
-
-  with open(params.train_path, 'rb') as f:
-    train_loader = pickle.load(f)
-
-  with open(params.valid_path, 'rb') as f:
-    valid_loader = pickle.load(f)
-
-  with open(params.test_path, 'rb') as f:
-    test_loader = pickle.load(f)
-
-  if checkpoint_path is None:
-    checkpoint_path = get_last_checkpoint_path(params.checkpoint_dir_path)
-
-  if not os.path.exists(params.pred_rand_dir_path):
-    os.makedirs(params.pred_rand_dir_path)
+  start_time = time()
+  print(timelog(f"Running waveform test for {params.dir_path}, {loader_type}, {checkpoint_path if checkpoint_path else 'last checkpoint'}", start_time))
   
-  if not os.path.exists(params.pred_top_dir_path):
-    os.makedirs(params.pred_top_dir_path)
+  if loader_type == 'train':
+    loader_path = params.train_path
+  elif loader_type == 'valid':
+    loader_path = params.valid_path
+  elif loader_type == 'test':
+    loader_path = params.test_path
+  else:
+    raise Exception('Invalid loader type')
 
-  checkpoint = torch.load(os.path.join(params.checkpoint_dir_path, checkpoint_path), weights_only=False)
-  generator = Generator(len(params.in_channels))
-  generator.load_state_dict(checkpoint['g_state_dict'])
-  generator.eval()
+  with open(loader_path, 'rb') as f:
+    loader = pickle.load(f)
 
-  save_random_pred_plots(params, generator, train_loader, 'train', num_plots=5)
+  if checkpoint_path == 'all':
+    checkpoint_paths = os.listdir(params.checkpoint_dir_path)
+    checkpoint_paths.sort()
+  elif checkpoint_path is None:
+    checkpoint_paths = [get_last_checkpoint_path(params.checkpoint_dir_path)]
+  else:
+    checkpoint_paths = [checkpoint_path]
+
+  checkpoint_paths = checkpoint_paths[:params.total_epochs]
   
-  comparisons = get_waveform_comparisons(generator, test_loader)
-  comparisons.sort(key=lambda x: x['pcc_p'], reverse=True)
+  pred_top_dir_path = os.path.join(params.pred_top_dir_path, loader_type)
+  if os.path.exists(pred_top_dir_path):
+    raise Exception('Directory {pred_top_dir_path} already exists!')
+  else:
+    os.makedirs(pred_top_dir_path)
+
+  comp_dir_path = os.path.join(params.comparison_dir_path, loader_type)
+  if os.path.exists(comp_dir_path):
+    raise Exception('Directory {comp_dir_path} already exists!')
+  else:
+    os.makedirs(comp_dir_path)
+
+  for i, checkpoint_path in enumerate(checkpoint_paths[:params.total_epochs]):
+    print(timelog(f'{i}/{len(checkpoint_paths)}', start_time))
+    checkpoint = torch.load(os.path.join(params.checkpoint_dir_path, checkpoint_path), weights_only=False)
+    generator = Generator(len(params.in_channels))
+    generator.load_state_dict(checkpoint['g_state_dict'])
+    generator.eval()
+
+    comparisons = get_waveform_comparisons(generator, loader)
+    comparisons.sort(key=lambda x: x['pcc_r'], reverse=True)
+    
+    checkpoint_str = checkpoint_path.split('.')[0]
+    comparison_path = os.path.join(comp_dir_path, f'{checkpoint_str}.csv')
+
+    comparisons_df = pd.DataFrame(comparisons)
+    comparisons_df.to_csv(comparison_path, index=False)
   
-  comparisons_df = pd.DataFrame(comparisons)
-  comparisons_df.to_csv(os.path.join(params.dir_path, 'comparisons.csv'), index=False)
-  
-  save_top_pred_plots(params, generator, comparisons, num_plots=-1)
+    save_pred_top_plots(pred_top_dir_path, generator, comparisons)
 
 
 if __name__ == '__main__':
   with open('project_active.json', 'r') as f:
     data = json.load(f)
   params_path = data['params_path']
+  loader_type = data['loader_type']
   checkpoint_path = data['checkpoint_path']
   params = Params(params_path)
-  run(params, checkpoint_path=checkpoint_path)
+  run(params, loader_type, checkpoint_path=checkpoint_path)
 
