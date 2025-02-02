@@ -224,8 +224,9 @@ def load_dataloader(path):
 
 
 if __name__ == '__main__':
-  with open('project_active.txt', 'r') as f:
-    path = f.readline().strip('\n')
+  with open('project_active.json', 'r') as f:
+    data = json.load(f)
+  path = data['params_path']
   print(f'Running recordutil for {path}')
   params = Params(path)
   save_dataloaders(params)

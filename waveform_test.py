@@ -15,7 +15,7 @@ from torch.utils.data import DataLoader
 from waveform_train import Generator, get_last_checkpoint_path
 
 
-def save_random_pred_plots(dirpath, generator, loader, prefix, num_plots):
+def save_random_pred_plots(params, generator, loader, prefix, num_plots):
   """
   Save a certain number of predicted vs real RHC plots.
   """
@@ -30,7 +30,8 @@ def save_random_pred_plots(dirpath, generator, loader, prefix, num_plots):
     plt.xlabel('Sample')
     plt.ylabel('mmHg')
     plt.legend()
-    plt.savefig(os.path.join(dirpath, f'random_pred_plot_{timestamp}_{prefix}_{i}.png'))
+    plot_name = f'random_pred_plot_{timestamp}_{prefix}_{i}.png'
+    plt.savefig(os.path.join(params.pred_rand_dir_path, plot_name))
     plt.close()
     if i == num_plots:
       break
@@ -94,7 +95,7 @@ def run(params, checkpoint_path=None):
   """
   Run tests.
   """
-  print(f'Running waveform test for {params.dir_path} ({checkpoint_path})')
+  print(f"Running waveform test for {params.dir_path} ({checkpoint_path if checkpoint_path else 'last checkpoint'})")
 
   with open(params.train_path, 'rb') as f:
     train_loader = pickle.load(f)
@@ -108,12 +109,18 @@ def run(params, checkpoint_path=None):
   if checkpoint_path is None:
     checkpoint_path = get_last_checkpoint_path(params.checkpoint_dir_path)
 
+  if not os.path.exists(params.pred_rand_dir_path):
+    os.makedirs(params.pred_rand_dir_path)
+  
+  if not os.path.exists(params.pred_top_dir_path):
+    os.makedirs(params.pred_top_dir_path)
+
   checkpoint = torch.load(os.path.join(params.checkpoint_dir_path, checkpoint_path), weights_only=False)
   generator = Generator(len(params.in_channels))
   generator.load_state_dict(checkpoint['g_state_dict'])
   generator.eval()
 
-  save_random_pred_plots(params.pred_rand_dir_path, generator, train_loader, 'train', num_plots=5)
+  save_random_pred_plots(params, generator, train_loader, 'train', num_plots=5)
   
   comparisons = get_waveform_comparisons(generator, test_loader)
   comparisons.sort(key=lambda x: x['pcc'], reverse=True)
@@ -125,8 +132,10 @@ def run(params, checkpoint_path=None):
 
 
 if __name__ == '__main__':
-  with open('project_active.txt', 'r') as f:
-    path = f.readline().strip('\n')
-  params = Params(path)
-  run(params, checkpoint_path='225.checkpoint')
+  with open('project_active.json', 'r') as f:
+    data = json.load(f)
+  params_path = data['params_path']
+  checkpoint_path = data['checkpoint_path']
+  params = Params(params_path)
+  run(params, checkpoint_path=checkpoint_path)
 
