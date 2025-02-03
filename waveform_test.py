@@ -115,8 +115,7 @@ def run(params, loader_type, checkpoint_path=None):
     loader = pickle.load(f)
 
   if checkpoint_path == 'all':
-    checkpoint_paths = os.listdir(params.checkpoint_dir_path)
-    checkpoint_paths.sort()
+    checkpoint_paths = os.listdir(params.checkpoint_dir_path).sorted()[:params.total_epochs]
   elif checkpoint_path is None:
     checkpoint_paths = [get_last_checkpoint_path(params.checkpoint_dir_path)]
   else:
@@ -136,7 +135,7 @@ def run(params, loader_type, checkpoint_path=None):
   else:
     os.makedirs(comp_dir_path)
 
-  for i, checkpoint_path in enumerate(checkpoint_paths[:params.total_epochs]):
+  for i, checkpoint_path in enumerate(checkpoint_paths):
     print(timelog(f'{i}/{len(checkpoint_paths)}', start_time))
     checkpoint = torch.load(os.path.join(params.checkpoint_dir_path, checkpoint_path), weights_only=False)
     generator = Generator(len(params.in_channels))
