@@ -56,7 +56,7 @@ def inverse_fisher_z(z):
   return np.tanh(z)
 
 
-def get_avg_pcc(all_pred, all_real):
+def get_avg_local_pcc(all_pred, all_real):
   """
   Calculate Pearson correlations for multiple pairs of waveforms using Fisher
   Z-transformation and calculate the p-value for testing the null hypothesis
@@ -81,11 +81,21 @@ def get_avg_pcc(all_pred, all_real):
   z_avg = np.mean(z_vals)
   z_std = np.std(z_vals)
   r_avg = inverse_fisher_z(z_avg)
+  r_std = inverse_fisher_z(z_std)
   sem = 1 / np.sqrt(m * (n - 3))
   z_stat = z_avg / sem
   p_val = 2 * (1 - norm.cdf(np.abs(z_stat)))
-  print(sem, z_stat, norm.cdf(np.abs(z_stat)))
-  return r_avg, p_val
+  return r_avg, r_std, p_val
+
+
+def get_global_pcc(all_pred, all_real):
+  """
+  Concatenate waveforms and calculate global Pearson correlation coefficient.
+  """
+  flat_pred = [val for pred in all_pred for val in pred]
+  flat_real = [val for real in all_real for val in real]
+  r, p = pearsonr(flat_pred, flat_real)
+  return r, p
 
 
 def get_rhc_float(rhc_str):
@@ -97,12 +107,12 @@ def get_rhc_float(rhc_str):
   return rhc_float
 
 
-def get_checkpoint_scores(params, dataset, start_time):
+def get_checkpoint_scores(params, start_time):
   """
   Calculate and save checkpoint correlations.
   """
   corrs = []
-  comparison_dir_path = os.path.join(params.comparison_dir_path, dataset)
+  comparison_dir_path = os.path.join(params.comparison_dir_path, 'valid')
   checkpoint_paths = sorted(os.listdir(comparison_dir_path))
   for i, comparison_path in enumerate(checkpoint_paths):
     all_pred = []
@@ -113,35 +123,28 @@ def get_checkpoint_scores(params, dataset, start_time):
       real_rhc = get_rhc_float(row['real_rhc'])
       all_pred.append(pred_rhc)
       all_real.append(real_rhc)
-    avg, std = get_avg_pcc(all_pred, all_real)
+    local_r, local_std, local_p = get_avg_local_pcc(all_pred, all_real)
+    global_r, global_p = get_global_pcc(all_pred, all_real)
     checkpoint = int(comparison_path.split('.')[0])
-    corrs.append((checkpoint, avg, std))
-    print(timelog(f'{dataset} | {i}/{len(checkpoint_paths)} | {avg:.3f} ({std:.3f})', start_time))
+    corrs.append({
+      'checkpoint': checkpoint,
+      'local_r': local_r,
+      'local_std': local_std,
+      'local_p': local_p,
+      'global_r': global_r,
+      'global_p': global_p
+    })
+    print(timelog(f'{i}/{len(checkpoint_paths)} | {local_r:.3f} ({local_std:.3f}, {local_p:.3f}) | {global_r:.3f} ({global_p})', start_time))
   return corrs
 
 
 def run(params):
   start_time = time()
   print(timelog(f'Calculating optimal epoch for {params.dir_path}', start_time))
-  
-  scores = get_checkpoint_scores(params, 'valid', start_time)
-
-  valid_x = [i[0] for i in correlations]
-  valid_y = [i[1] for i in correlations]
-  valid_e = [i[2] for i in correlations]
-
-  plt.errorbar(valid_x, valid_y, valid_e, label='Valid')
-  plt.title('Epoch vs Avg Score')
-  plt.xlabel('Epoch')
-  plt.ylabel('Mean Score (SD)')
-  plt.legend()
-  plt.savefig(os.path.join(params.dir_path, 'checkpoint_scores.png'))
-  plt.close()
-  
-  scores_df = pd.DataFrame(valid_scores, columns=['checkpoint', 'avg', 'std'])
-  scores_df.to_csv(os.path.join(params.dir_path, f'checkpoint_scores.csv'), index=False)
-  best_score = valid_scores_df.loc[valid_scores_df['score'].idxmax()]
-
+  scores = get_checkpoint_scores(params, start_time)
+  scores_df = pd.DataFrame.from_dict(scores)
+  scores_df.to_csv(os.path.join(params.dir_path, f'checkpoint_scores_.csv'), index=False)
+  best_score = scores_df.loc[scores_df['local_r'].idxmax()]
   with open(os.path.join(params.dir_path, 'checkpoint_best.txt'), 'w') as f:
     f.write(best_score.to_string())
 
