@@ -8,6 +8,7 @@
   "valid_path": "loader_valid.pickle",
   "test_path": "loader_test.pickle",
   "checkpoint_dir_path": "checkpoints",
+  "comparison_dir_path": "comparisons",
   "pred_top_dir_path": "pred_top",
   "pred_rand_dir_path": "pred_rand",
   "alpha": 0.0001,
