@@ -24,11 +24,17 @@ segments containing negative RHC values, and used batch size of 4.
 lambda_aux of 500 instead of 100.
 
 06) Return to using minmax normalization relative to each segment rather than
-across all segments. Return to using lambda_aux of 100. Use all SCG channels
-(patch_CC_lat, patch_ACC_hf, and patch_ACC_dv) for PA waveforms.
+across all segments. Return to using lambda_aux of 100 and batch_size of 64.  Use 
+all SCG channels (patch_ACC_lat, patch_ACC_hf, and patch_ACC_dv) for PA waveforms.
 
 07) Use patch_ACC_lat and patch_ACC_hf for PA waveforms.
 
 08) Use patch_ACC_lat and patch_ACC_dv for PA waveforms.
 
 09) Use patch_ACC_hf and patch_ACC_dv for PA waveforms.
+
+10) Use patch_ACC_lat, patch_ACC_hf, patch_ACC_dv, and patch_ECG for PA
+waveforms.
+
+11) Use patch_ACC_lat, patch_ACC_hf, and patch_ACC_dv for RV waveforms. Change
+batch size to 16 given reduced number of RV samples.
