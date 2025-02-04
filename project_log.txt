@@ -38,3 +38,25 @@ waveforms.
 
 11) Use patch_ACC_lat, patch_ACC_hf, and patch_ACC_dv for RV waveforms. Change
 batch size to 16 given reduced number of RV samples.
+
+12) Use patch_ACC_lat and patch_ACC_hf for RV waveforms.
+
+13) Use patch_ACC_lat and patch_ACC_dv for RV waveforms.
+
+14) Use patch_ACC_hf and patch_ACC_dv for RV waveforms.
+
+15) Use patch_ACC_lat, patch_ACC_hf, and patch_ACC_dv for RA waveforms.
+
+16) Use patch_ACC_lat and patch_ACC_hf for RA waveforms.
+
+17) Use patch_ACC_lat and patch_ACC_dv for RA waveforms.
+
+18) Use patch_ACC_hf and patch_ACC_dv for RA waveforms.
+
+19) Use patch_ACC_lat, patch_ACC_hf, and patch_ACC_dv for PCW waveforms.
+
+20) Use patch_ACC_lat and patch_ACC_hf for PCW waveforms.
+
+21) Use patch_ACC_lat and patch_ACC_dv for PCW waveforms.
+
+22) Use patch_ACC_hf and patch_ACC_dv for PCW waveforms.
