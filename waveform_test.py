@@ -115,13 +115,11 @@ def run(params, loader_type, checkpoint_path=None):
     loader = pickle.load(f)
 
   if checkpoint_path == 'all':
-    checkpoint_paths = os.listdir(params.checkpoint_dir_path).sorted()[:params.total_epochs]
+    checkpoint_paths = sorted(os.listdir(params.checkpoint_dir_path))[:params.total_epochs]
   elif checkpoint_path is None:
     checkpoint_paths = [get_last_checkpoint_path(params.checkpoint_dir_path)]
   else:
     checkpoint_paths = [checkpoint_path]
-
-  checkpoint_paths = checkpoint_paths[:params.total_epochs]
   
   pred_top_dir_path = os.path.join(params.pred_top_dir_path, loader_type)
   if os.path.exists(pred_top_dir_path):
