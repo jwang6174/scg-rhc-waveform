@@ -53,10 +53,37 @@ batch size to 16 given reduced number of RV samples.
 
 18) Use patch_ACC_hf and patch_ACC_dv for RA waveforms.
 
-19) Use patch_ACC_lat, patch_ACC_hf, and patch_ACC_dv for PCW waveforms.
+19) Use patch_ACC_lat, patch_ACC_hf, and patch_ACC_dv for PCW waveforms. Change
+batch size back to 64 for PCW waveforms.
 
 20) Use patch_ACC_lat and patch_ACC_hf for PCW waveforms.
 
 21) Use patch_ACC_lat and patch_ACC_dv for PCW waveforms.
 
 22) Use patch_ACC_hf and patch_ACC_dv for PCW waveforms.
+
+23) Use patch_ACC_lat for PA waveforms.
+
+24) Use patch_ACC_hf for PA waveforms.
+
+25) Use patch_ACC_dv for PA waveforms.
+
+26) Use patch_ACC_lat, patch_ACC_hf, patch_ACC_dv, and patch_ECG for RV waveforms.
+Use batch size of 16.
+
+27) Use patch_ACC_lat for RV waveforms.
+
+28) Use patch_ACC_hf for RV waveforms.
+
+29) Use patch_ACC_dv for RV waveforms.
+
+30) Use patch_ACC_lat, patch_ACC_hf, patch_ACC_dv, and patch_ECG for PCW waveforms.
+Use batch size of 64.
+
+31) Use patch_ACC_lat for PCW waveforms.
+
+32) Use patch_ACC_hf for PCW waveforms.
+
+33) Use patch_ACC_dv for PCW waveforms.
+
+
