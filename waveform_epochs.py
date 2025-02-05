@@ -31,11 +31,11 @@ Lastly, if there are discontinuities or offsets at the boundaries between
 concatenated waveforms, these might artificially affect the correlation.
 """
 
-import json
 import matplotlib.pyplot as plt
 import numpy as np
 import os
 import pandas as pd
+import sys
 from paramutil import Params
 from scipy.stats import pearsonr, norm
 from time import time
@@ -140,7 +140,7 @@ def get_checkpoint_scores(params, start_time):
 
 def run(params):
   start_time = time()
-  print(timelog(f'Calculating optimal epoch for {params.dir_path}', start_time))
+  print(timelog(f'Run waveform_epochs for {params.dir_path}', start_time))
   scores = get_checkpoint_scores(params, start_time)
   scores_df = pd.DataFrame.from_dict(scores)
   scores_df.to_csv(os.path.join(params.dir_path, f'checkpoint_scores_.csv'), index=False)
@@ -150,6 +150,5 @@ def run(params):
 
 
 if __name__ == '__main__':
-  with open('project_active.json', 'r') as f:
-    data = json.load(f)
-  run(Params(data['params_path']))
+  params = Params(os.path.join(sys.argv[1], 'params.json'))
+  run(params)

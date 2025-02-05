@@ -1,9 +1,9 @@
-import json
 import matplotlib.pyplot as plt
 import numpy as np
 import os
 import pandas as pd
 import pickle
+import sys
 import torch
 import matplotlib.pyplot as plt
 from datetime import datetime
@@ -95,12 +95,12 @@ def get_waveform_comparisons(generator, loader):
   return comparisons
 
 
-def run(params, loader_type, checkpoint_path=None):
+def run(params, loader_type, checkpoint_path):
   """
   Run tests.
   """
   start_time = time()
-  print(timelog(f"Running waveform test for {params.dir_path}, {loader_type}, {checkpoint_path if checkpoint_path else 'last checkpoint'}", start_time))
+  print(timelog(f"Run waveform_test for {params.dir_path}, {loader_type}, {checkpoint_path if checkpoint_path else 'last checkpoint'}", start_time))
   
   if loader_type == 'train':
     loader_path = params.train_path
@@ -116,7 +116,7 @@ def run(params, loader_type, checkpoint_path=None):
 
   if checkpoint_path == 'all':
     checkpoint_paths = sorted(os.listdir(params.checkpoint_dir_path))[:params.total_epochs]
-  elif checkpoint_path is None:
+  elif checkpoint_path == 'last':
     checkpoint_paths = [get_last_checkpoint_path(params.checkpoint_dir_path)]
   else:
     checkpoint_paths = [checkpoint_path]
@@ -153,11 +153,8 @@ def run(params, loader_type, checkpoint_path=None):
 
 
 if __name__ == '__main__':
-  with open('project_active.json', 'r') as f:
-    data = json.load(f)
-  params_path = data['params_path']
-  loader_type = data['loader_type']
-  checkpoint_path = data['checkpoint_path']
-  params = Params(params_path)
-  run(params, loader_type, checkpoint_path=checkpoint_path)
-
+  dir_path = sys.argv[1]
+  loader_type = sys.argv[2]
+  checkpoint_path = sys.argv[3]
+  params = Params(os.path.join(dir_path, 'params.json'))
+  run(params, loader_type, checkpoint_path)

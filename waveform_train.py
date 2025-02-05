@@ -1,8 +1,8 @@
-import json
 import matplotlib.pyplot as plt
 import numpy as np
 import os
 import pickle
+import sys
 import torch
 import torch.autograd as autograd
 import torch.nn as nn
@@ -300,6 +300,9 @@ def run(params):
   """
   Run waveform training from given checkpoint, if any, and parameters.
   """
+  start_time = time()
+  print(timelog(f'Run waveform_train for {params.dir_path}', start_time))
+  
   in_channels = len(params.in_channels)
   alpha = params.alpha
   beta1 = params.beta1
@@ -311,13 +314,11 @@ def run(params):
   train_path = params.train_path
   dir_path = params.dir_path
   checkpoint_dir_path = params.checkpoint_dir_path
-  print(timelog('Loaded params', time()))
 
   if not os.path.exists(checkpoint_dir_path):
     os.makedirs(checkpoint_dir_path)
 
   train_loader = load_dataloader(train_path)
-  print(timelog('Loaded training set', time()))
   
   generator = Generator(in_channels)
   discriminator = Discriminator(in_channels)
@@ -333,7 +334,6 @@ def run(params):
   last_checkpoint_path = get_last_checkpoint_path(checkpoint_dir_path)
 
   if last_checkpoint_path is not None:
-    print(timelog(f'Loaded prior checkpoint: {last_checkpoint_path}', time()))
     checkpoint = torch.load(os.path.join(checkpoint_dir_path, last_checkpoint_path), weights_only=False)
     start_time = checkpoint['start_time']
     epoch = checkpoint['epoch'] + 1
@@ -343,8 +343,8 @@ def run(params):
     discriminator.load_state_dict(checkpoint['d_state_dict'])
     g_optimizer.load_state_dict(checkpoint['g_optimizer_state_dict'])
     d_optimizer.load_state_dict(checkpoint['d_optimizer_state_dict'])
+    print(timelog(f'Loaded {last_checkpoint_path}', start_time))
   else:
-    print(timelog(f'Started new checkpoint', time()))
     start_time = time()
     epoch = 0
     g_losses = []
@@ -413,8 +413,6 @@ def run(params):
     epoch += 1
 
 if __name__ == '__main__':
-  with open('project_active.json', 'r') as f:
-    data = json.load(f)
-  path = data['params_path']
-  print(timelog(f'Starting waveform training with {path}', time()))
-  run(Params(path))
+  dir_path = sys.argv[1]
+  params = Params(os.path.join(dir_path, 'params.json'))
+  run(params)

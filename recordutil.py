@@ -3,6 +3,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 import os
 import pickle
+import sys
 import torch
 import wfdb
 from datetime import datetime
@@ -10,6 +11,8 @@ from paramutil import Params
 from pathlib import Path
 from pathutil import PROCESSED_DATA_PATH
 from sklearn.model_selection import train_test_split
+from time import time
+from timelog import timelog
 from torch.utils.data import Dataset, DataLoader
 from waveform_noise import has_noise
 
@@ -190,14 +193,11 @@ def save_dataloaders(params):
   test_loader = DataLoader(test_set, batch_size=1, shuffle=True)
 
   if os.path.exists(params.train_path):
-    print('Train file already exists!')
-    return
+    raise Exception('Train file already exists!')
   elif os.path.exists(params.valid_path):
-    print('Valid file already exists!')
-    return
+    raise Exception('Valid file already exists!')
   elif os.path.exists(params.test_path):
-    print('Test file already exists!')
-    return
+    raise Exception('Test file already exists!')
 
   with open(params.train_path, 'wb') as f:
     pickle.dump(train_loader, f)
@@ -224,10 +224,13 @@ def load_dataloader(path):
     return pickle.load(f)
 
 
-if __name__ == '__main__':
-  with open('project_active.json', 'r') as f:
-    data = json.load(f)
-  path = data['params_path']
-  print(f'Running recordutil for {path}')
-  params = Params(path)
+def run(params):
+  start_time = time()
+  print(timelog(f'Run recordutil for {params.dir_path}', start_time))
   save_dataloaders(params)
+
+
+if __name__ == '__main__':
+  dir_path = sys.argv[1]
+  params = Params(os.path.join(dir_path, 'params.json'))
+  run(params)
