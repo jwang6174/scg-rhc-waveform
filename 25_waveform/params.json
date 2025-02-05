@@ -1,9 +1,9 @@
 {
-  "dir_path": "18_waveform",
-  "in_channels": ["patch_ACC_hf", "patch_ACC_dv"],
-  "chamber": "RA",
+  "dir_path": "25_waveform",
+  "in_channels": ["patch_ACC_dv"],
+  "chamber": "PA",
   "segment_size": 1.5,
-  "batch_size": 16,
+  "batch_size": 64,
   "train_path": "loader_train.pickle",
   "valid_path": "loader_valid.pickle",
   "test_path": "loader_test.pickle",
