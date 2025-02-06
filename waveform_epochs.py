@@ -143,7 +143,7 @@ def run(params):
   print(timelog(f'Run waveform_epochs for {params.dir_path}', start_time))
   scores = get_checkpoint_scores(params, start_time)
   scores_df = pd.DataFrame.from_dict(scores)
-  scores_df.to_csv(os.path.join(params.dir_path, f'checkpoint_scores_.csv'), index=False)
+  scores_df.to_csv(os.path.join(params.dir_path, f'checkpoint_scores.csv'), index=False)
   best_score = scores_df.loc[scores_df['local_r'].idxmax()]
   with open(os.path.join(params.dir_path, 'checkpoint_best.txt'), 'w') as f:
     f.write(best_score.to_string())
