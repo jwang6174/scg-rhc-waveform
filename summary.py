@@ -1,9 +1,11 @@
 import json
+import numpy as np
 import os
 import pandas as pd
 import wfdb
 from pathutil import PROCESSED_DATA_PATH
-from recordutil import get_record_names, get_segments
+from recordutil import get_record_names, get_segments, get_chamber_intervals, SAMPLE_FREQ
+    
 
 record_names = get_record_names()
 
@@ -13,6 +15,11 @@ for record_name in record_names:
   with open(path, 'r') as f:
     jsons.append(json.load(f))
 df = pd.DataFrame(jsons)
+
+records = []
+for record_name in record_names:
+  record = wfdb.rdrecord(os.path.join(PROCESSED_DATA_PATH, record_name))
+  records.append(record)
 
 print("Age (yr)")
 print(f"  {df['age'].mean():.1f} ± {df['age'].std():.1f}")
@@ -65,11 +72,39 @@ print("Fine alignment")
 print(f"  Yes {df['fine_alignment'].value_counts().get(True)}")
 print(f"  No {df['fine_alignment'].value_counts().get(False)}")
 
+print("Diagnosed with HF")
+print(f"  Yes {df['heart failure'].value_counts().get(True)}")
+print(f"  No {df['heart failure'].value_counts().get(False)}")
+
+print("Outpatient")
+print(f"  Yes {df['outpatient'].value_counts().get(True)}")
+print(f"  No {df['outpatient'].value_counts().get(False)}")
+
 sigs = {}
-for record_name in record_names:
-  record = wfdb.rdrecord(os.path.join(PROCESSED_DATA_PATH, record_name))
+for record in records:
   for sig in record.sig_name:
     sigs[sig] = sigs.get(sig, 0) + 1
 
 for sig, count in sigs.items():
    print(f'{sig}: {count}')
+
+chamber_times = {
+  'RA': [],
+  'RV': [],
+  'PA': [],
+  'PCW': [],
+}
+for chamber in chamber_times:
+  for record_name in record_names:
+    time = 0
+    for start_index, end_index in get_chamber_intervals(record_name, chamber):
+      start_sec = start_index / SAMPLE_FREQ
+      end_sec = end_index / SAMPLE_FREQ
+      time += (end_sec - start_sec)
+    chamber_times[chamber].append(time)
+
+for chamber, time in chamber_times.items():
+  total = np.sum(time)
+  avg = np.mean(time)
+  std = np.std(time)
+  print(f'{chamber}: avg {avg:.2f} ({std:.2f}), total {total:.2f}')
