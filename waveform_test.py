@@ -1,3 +1,4 @@
+import json
 import matplotlib.pyplot as plt
 import numpy as np
 import os
@@ -134,7 +135,7 @@ def run(params, loader_type, checkpoint_path):
     os.makedirs(comp_dir_path)
 
   for i, checkpoint_path in enumerate(checkpoint_paths):
-    print(timelog(f'{i}/{len(checkpoint_paths)}', start_time))
+    print(timelog(f'waveform_test | {params.dir_path} | {i}/{len(checkpoint_paths)}', start_time))
     checkpoint = torch.load(os.path.join(params.checkpoint_dir_path, checkpoint_path), weights_only=False)
     generator = Generator(len(params.in_channels))
     generator.load_state_dict(checkpoint['g_state_dict'])

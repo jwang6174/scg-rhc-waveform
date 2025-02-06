@@ -383,7 +383,7 @@ def run(params):
       if i > 0 and (i % 10 == 0 or i == len(train_loader) - 1):
         g_loss_sum = sum(g_losses)
         d_loss_sum = sum(d_losses)
-        print(timelog(f'Epoch {epoch}/{total_epochs} | Batch {i}/{len(train_loader)}', start_time))
+        print(timelog(f'waveform_train | {dir_path} | epoch {epoch}/{total_epochs} | batch {i}/{len(train_loader)}', start_time))
         print(f'  G Loss Diff: {g_loss_sum - g_loss_total}')
         print(f'  D Loss Diff: {d_loss_sum - d_loss_total}')
         g_loss_total = g_loss_sum

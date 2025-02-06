@@ -134,7 +134,7 @@ def get_checkpoint_scores(params, start_time):
       'global_r': global_r,
       'global_p': global_p
     })
-    print(timelog(f'{i}/{len(checkpoint_paths)} | {local_r:.3f} ({local_std:.3f}, {local_p:.3f}) | {global_r:.3f} ({global_p})', start_time))
+    print(timelog(f'waveform_epochs | {params.dir_path} | {i}/{len(checkpoint_paths)} | {local_r:.3f} ({local_std:.3f}, {local_p:.3f}) | {global_r:.3f} ({global_p})', start_time))
   return corrs
 
 
