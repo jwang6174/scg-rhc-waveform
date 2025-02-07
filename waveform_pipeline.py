@@ -8,6 +8,7 @@ from waveform_epochs import run as waveform_epochs
 
 
 def run(params):
+  recordutil(params)
   waveform_train(params)
   waveform_test(params, 'valid', 'all')
   waveform_epochs(params)
