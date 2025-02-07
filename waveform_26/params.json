@@ -1,0 +1,23 @@
+{
+  "dir_path": "waveform_26",
+  "in_channels": ["patch_ACC_lat", "patch_ACC_hf", "patch_ACC_dv", "patch_ECG"],
+  "chamber": "RV",
+  "segment_size": 1.5,
+  "batch_size": 16,
+  "train_path": "loader_train.pickle",
+  "valid_path": "loader_valid.pickle",
+  "test_path": "loader_test.pickle",
+  "checkpoint_dir_path": "checkpoints",
+  "comparison_dir_path": "comparisons",
+  "pred_top_dir_path": "pred_top",
+  "pred_rand_dir_path": "pred_rand",
+  "alpha": 0.0001,
+  "beta1": 0.5,
+  "beta2": 0.999,
+  "n_critic": 2,
+  "lambda_gp": 10,
+  "lambda_aux": 100,
+  "total_epochs": 250,
+  "min_RHC": -50,
+  "use_global_min_max": false
+}
