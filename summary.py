@@ -83,6 +83,11 @@ def summarize_boolean(df, var):
   print(f"  N {df[var].value_counts().get(False)}")
 
 
+def show_missing_vals(df):
+  print('Missing vals:')
+  print(df.isna().sum()[df.isna().sum() > 0])
+
+
 def summarize(df, gender_stratified):
   continuous_vars = [
     'age',
@@ -138,6 +143,8 @@ def summarize(df, gender_stratified):
     group2 = df[df['gender'] == 'Female']['NYHAC']
     _, p_value = ranksums(group1, group2, nan_policy='omit')
     print(f"  Sig {p_value}")
+
+  show_missing_vals(df)
 
 
 if __name__ == '__main__':
