@@ -5,7 +5,7 @@ import pandas as pd
 import wfdb
 from pathutil import PROCESSED_DATA_PATH
 from recordutil import get_record_names, get_chamber_intervals, SAMPLE_FREQ
-from scipy.stats import ttest_ind
+from scipy.stats import ttest_ind, ranksums
 
 
 def get_modified_maclab_meas(original):
@@ -65,7 +65,7 @@ def add_chamber_durations(df):
       df[record_name][chamber] = time
 
 
-def summarize_numerical(df, var, gender_stratified):
+def summarize_continuous(df, var, gender_stratified):
   print(var)
   print(f"  Min {df[var].min():.2f}")
   print(f"  Max {df[var].max():.2f}")
@@ -84,8 +84,7 @@ def summarize_boolean(df, var):
 
 
 def summarize(df, gender_stratified):
-  
-  numerical_vars = [
+  continuous_vars = [
     'age',
     'bmi',
     'sbp',
@@ -123,8 +122,8 @@ def summarize(df, gender_stratified):
     'outpatient',
   ]
   
-  for var in numerical_vars:
-    summarize_numerical(df, var, gender_stratified)
+  for var in continuous_vars:
+    summarize_continuous(df, var, gender_stratified)
   
   for var in boolean_vars:
     summarize_boolean(df, var)
@@ -134,6 +133,11 @@ def summarize(df, gender_stratified):
   print(f"  2 {df['NYHAC'].value_counts().get(2)}")
   print(f"  3 {df['NYHAC'].value_counts().get(3)}")
   print(f"  4 {df['NYHAC'].value_counts().get(4)}")
+  if not gender_stratified:
+    group1 = df[df['gender'] == 'Male']['NYHAC']
+    group2 = df[df['gender'] == 'Female']['NYHAC']
+    _, p_value = ranksums(group1, group2, nan_policy='omit')
+    print(f"  Sig {p_value}")
 
 
 if __name__ == '__main__':
