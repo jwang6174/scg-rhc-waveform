@@ -70,6 +70,7 @@ def summarize_continuous(df, var, gender_stratified):
   print(f"  Min {df[var].min():.2f}")
   print(f"  Max {df[var].max():.2f}")
   print(f"  Avg {df[var].mean():.2f} ± {df[var].std():.2f}")
+  print(f"  Sum {df[var].sum():.2f}")
   if not gender_stratified:
     group1 = df[df['gender'] == 'Male'][var]
     group2 = df[df['gender'] == 'Female'][var]
@@ -125,6 +126,29 @@ def summarize(df, gender_stratified):
     'Missing_MaclabRHC',
     'fine_alignment',
     'outpatient',
+    'patch_ECG',
+    'patch_ACC_lat',
+    'patch_ACC_hf',
+    'patch_ACC_dv',
+    'patch_Hum',
+    'patch_Pre',
+    'patch_Temp',
+    'RHC_pressure',
+    'ART',
+    'ECG_lead_I',
+    'ECG_lead_II',
+    'ECG_lead_III',
+    'aVR',
+    'aVL',
+    'aVF',
+    'ECG_lead_V1',
+    'ECG_lead_V2',
+    'ECG_lead_V3',
+    'ECG_lead_V4',
+    'ECG_lead_V5',
+    'ECG_lead_V6',
+    'PLETH',
+    'RESP',
   ]
   
   for var in continuous_vars:
