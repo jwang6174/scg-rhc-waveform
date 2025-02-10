@@ -33,7 +33,7 @@ def get_waveform_comparisons(generator, loader):
     result = pearsonr(x, y)
     pcc_r = result.statistic
     pcc_p = result.pvalue
-    pcc_ci = result.confidence_interval(confidence_level=0.95)
+    pcc_ci95 = result.confidence_interval(confidence_level=0.95)
     comparison = {
       'filename': filename,
       'start_idx': int(start_idx),
@@ -42,8 +42,8 @@ def get_waveform_comparisons(generator, loader):
       'pred_rhc': str(y.tolist()),
       'pcc_r': pcc_r,
       'pcc_p': pcc_p,
-      'pcc_ci95_low': pcc_ci.low,
-      'pcc_ci95_high': pcc_ci.high,
+      'pcc_ci95_low': pcc_ci95.low,
+      'pcc_ci95_high': pcc_ci95.high,
     }
     comparisons.append(comparison)
   return comparisons
