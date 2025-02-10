@@ -4,7 +4,7 @@ from paramutil import Params
 from recordutil import run as recordutil, SCGDataset
 from waveform_train import run as waveform_train
 from waveform_test import run as waveform_test
-from waveform_epochs import run as waveform_epochs
+from waveform_checkpoint import run as waveform_checkpoint
 
 
 def run(params):
@@ -13,8 +13,11 @@ def run(params):
   except Exception as e:
     print(e)
   waveform_train(params)
-  waveform_test(params, 'valid', 'all')
-  waveform_epochs(params)
+  try:
+    waveform_test(params, 'valid', 'all')
+  except Exception as e:
+    print(e)
+  waveform_checkpoint(params)
 
 
 if __name__ == '__main__':
