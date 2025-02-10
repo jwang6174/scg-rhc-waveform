@@ -36,7 +36,7 @@ def get_checkpoint_scores(params, start_time):
     pcc_r = result.statistic
     pcc_p = result.pvalue
     pcc_ci95 = result.confidence_interval(confidence_level=0.95)
-    checkpoint = int(comparison_path.split('.')[0])
+    checkpoint = f"{comparison_path.split('.')[0]}.checkpoint"
     corrs.append({
       'checkpoint': checkpoint,
       'pcc_r': pcc_r,
