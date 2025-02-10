@@ -49,12 +49,20 @@ def get_waveform_comparisons(generator, loader):
   return comparisons
 
 
+def get_processed_checkpoints(comp_dir_path):
+  """
+  Returns checkpoints that have already been processed in a given directory.
+  """
+  return frozenset(f"{filename.split('.')[0]}.checkpoint" for filename in os.listdir(comp_dir_path))
+
+
 def run(params, loader_type, checkpoint_path):
   """
   Run tests.
   """
   start_time = time()
-  print(timelog(f"Run waveform_test for {params.dir_path}, {loader_type}, {checkpoint_path if checkpoint_path else 'last checkpoint'}", start_time))
+  checkpoint_message = f"{checkpoint_path if checkpoint_path else 'last checkpoint'}"
+  print(timelog(f"Run waveform_test for {params.dir_path} | {loader_type} | {checkpoint_message}", start_time))
   
   if loader_type == 'train':
     loader_path = params.train_path
@@ -76,13 +84,15 @@ def run(params, loader_type, checkpoint_path):
     checkpoint_paths = [checkpoint_path]
 
   comp_dir_path = os.path.join(params.comparison_dir_path, loader_type)
-  if os.path.exists(comp_dir_path):
-    raise Exception(f'Directory {comp_dir_path} already exists!')
-  else:
+  if not os.path.exists(comp_dir_path):
     os.makedirs(comp_dir_path)
 
+  processed_checkpoints = get_processed_checkpoints(comp_dir_path)
+
   for i, checkpoint_path in enumerate(checkpoint_paths):
-    print(timelog(f'waveform_test | {params.dir_path} | {i}/{len(checkpoint_paths)}', start_time))
+    print(timelog(f'waveform_test | {params.dir_path} | {loader_type} | {checkpoint_message} | {i}/{len(checkpoint_paths)}', start_time))
+    if checkpoint_path in processed_checkpoints:
+      continue
     checkpoint = torch.load(os.path.join(params.checkpoint_dir_path, checkpoint_path), weights_only=False)
     generator = Generator(len(params.in_channels))
     generator.load_state_dict(checkpoint['g_state_dict'])
