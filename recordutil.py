@@ -173,6 +173,13 @@ def save_dataloaders(params):
   """
   Get training and test segments, then save as torch DataLoader objects.
   """
+  if os.path.exists(params.train_path):
+    raise Exception('Train file already exists!')
+  elif os.path.exists(params.valid_path):
+    raise Exception('Valid file already exists!')
+  elif os.path.exists(params.test_path):
+    raise Exception('Test file already exists!')
+
   all_segments = get_segments(params)
 
   if params.use_global_min_max:
@@ -191,13 +198,6 @@ def save_dataloaders(params):
   train_loader = DataLoader(train_set, batch_size=params.batch_size, shuffle=True)
   valid_loader = DataLoader(valid_set, batch_size=1, shuffle=True)
   test_loader = DataLoader(test_set, batch_size=1, shuffle=True)
-
-  if os.path.exists(params.train_path):
-    raise Exception('Train file already exists!')
-  elif os.path.exists(params.valid_path):
-    raise Exception('Valid file already exists!')
-  elif os.path.exists(params.test_path):
-    raise Exception('Test file already exists!')
 
   with open(params.train_path, 'wb') as f:
     pickle.dump(train_loader, f)
