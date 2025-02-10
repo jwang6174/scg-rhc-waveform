@@ -77,7 +77,7 @@ def run(params, loader_type, checkpoint_path):
 
   comp_dir_path = os.path.join(params.comparison_dir_path, loader_type)
   if os.path.exists(comp_dir_path):
-    raise Exception('Directory {comp_dir_path} already exists!')
+    raise Exception(f'Directory {comp_dir_path} already exists!')
   else:
     os.makedirs(comp_dir_path)
 
