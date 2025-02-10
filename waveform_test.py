@@ -17,52 +17,6 @@ from torch.utils.data import DataLoader
 from waveform_train import Generator, get_last_checkpoint_path
 
 
-def save_pred_rand_plots(dirpath, generator, loader, prefix, num_plots):
-  """
-  Save a certain number of predicted vs real RHC plots.
-  """
-  for i, segment in enumerate(loader, start=1):
-    scg = segment[0]
-    real_rhc = segment[1]
-    timestamp = str(datetime.now().strftime('%Y-%m-%d %H-%M-%S')).replace(' ', '_')
-    real_rhc = real_rhc.detach().numpy()[0, 0, :]
-    pred_rhc = generator(scg).detach().numpy()[0, 0, :]
-    plt.plot(pred_rhc, label='Pred RHC')
-    plt.plot(real_rhc, label='Real RHC')
-    plt.xlabel('Sample')
-    plt.ylabel('mmHg')
-    plt.legend()
-    plot_name = f'random_pred_plot_{timestamp}_{prefix}_{i}.png'
-    plt.savefig(os.path.join(dirpath, plot_name))
-    plt.close()
-    if i == num_plots:
-      break
-
-
-def save_pred_top_plots(dirpath, generator, sorted_comparisons):
-  """
-  Save most similar predicted RHC plots.
-  """
-  for i, comparison in enumerate(sorted_comparisons, start=1):
-    pcc_r = comparison['pcc_r']
-    pcc_p = comparison['pcc_p']
-    filename = comparison['filename']
-    start_idx = comparison['start_idx']
-    stop_idx = comparison['stop_idx']
-    real_rhc = comparison['real_rhc']
-    pred_rhc = comparison['pred_rhc']
-    plt.plot(pred_rhc, label='Pred RHC')
-    plt.plot(real_rhc, label='Real RHC')
-    plt.title(f'{pcc_r:.3f}, {pcc_p:.3f}')
-    plt.xlabel('Sample')
-    plt.ylabel('mmHg')
-    plt.legend()
-    plot_name = f'top_pred_plot_{i:03d}_{filename}_{start_idx}-{stop_idx}'
-    plot_path = os.path.join(dirpath, plot_name)
-    plt.savefig(plot_path)
-    plt.close()
-
-
 def get_waveform_comparisons(generator, loader):
   """
   Get waveform comparions for real and predicted RHC waveforms.
@@ -76,23 +30,22 @@ def get_waveform_comparisons(generator, loader):
     stop_idx = segment[4]
     x = real_rhc.detach().numpy()[0, :]
     y = generator(scg).detach().numpy()[0, 0, :]
-    pcc_r, pcc_p = pearsonr(x, y)
+    result = pearsonr(x, y)
+    pcc_r = result.statistic
+    pcc_p = result.pvalue
+    pcc_ci = result.confidence_interval(confidence_level=0.95)
     comparison = {
       'filename': filename,
       'start_idx': int(start_idx),
       'stop_idx': int(stop_idx),
-      'real_rhc': x,
-      'pred_rhc': y,
+      'real_rhc': str(x.tolist()),
+      'pred_rhc': str(y.tolist()),
       'pcc_r': pcc_r,
       'pcc_p': pcc_p,
-      }
+      'pcc_ci95_low': pcc_ci.low,
+      'pcc_ci95_high': pcc_ci.high,
+    }
     comparisons.append(comparison)
-
-  for comparison in comparisons:
-    filepath = os.path.join(PROCESSED_DATA_PATH, f"{comparison['filename']}.json")
-    with open(filepath, 'r') as f:
-      comparison.update(json.load(f))
-
   return comparisons
 
 
@@ -121,12 +74,6 @@ def run(params, loader_type, checkpoint_path):
     checkpoint_paths = [get_last_checkpoint_path(params.checkpoint_dir_path)]
   else:
     checkpoint_paths = [checkpoint_path]
-  
-  pred_top_dir_path = os.path.join(params.pred_top_dir_path, loader_type)
-  if os.path.exists(pred_top_dir_path):
-    raise Exception('Directory {pred_top_dir_path} already exists!')
-  else:
-    os.makedirs(pred_top_dir_path)
 
   comp_dir_path = os.path.join(params.comparison_dir_path, loader_type)
   if os.path.exists(comp_dir_path):
@@ -148,9 +95,7 @@ def run(params, loader_type, checkpoint_path):
     comparison_path = os.path.join(comp_dir_path, f'{checkpoint_str}.csv')
 
     comparisons_df = pd.DataFrame(comparisons)
-    comparisons_df.to_csv(comparison_path, index=False)
-  
-    save_pred_top_plots(pred_top_dir_path, generator, comparisons)
+    comparisons_df.to_csv(comparison_path, index=False) 
 
 
 if __name__ == '__main__':
