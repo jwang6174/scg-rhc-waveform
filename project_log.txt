@@ -86,4 +86,10 @@ Use batch size of 64.
 
 33) Use patch_ACC_dv for PCW waveforms.
 
+34) Use patch_ACC_lat for RA waveforms.
 
+35) Use patch_ACC_hf for RA waveforms.
+
+36) Use patch_ACC_dv for RA waveforms.
+
+37) Use patch_ACC_lat, patch_ACC_hf, patch_ACC_dv, and patch_ECG for RA waveforms.
