@@ -1,5 +1,4 @@
 import json
-import matplotlib.pyplot as plt
 import numpy as np
 import os
 import pandas as pd
@@ -64,6 +63,7 @@ def run(params, loader_type, checkpoint_path):
   checkpoint_message = f"{checkpoint_path if checkpoint_path else 'last checkpoint'}"
   print(timelog(f"Run waveform_test for {params.dir_path} | {loader_type} | {checkpoint_message}", start_time))
   
+  # Check loader type
   if loader_type == 'train':
     loader_path = params.train_path
   elif loader_type == 'valid':
@@ -73,9 +73,11 @@ def run(params, loader_type, checkpoint_path):
   else:
     raise Exception('Invalid loader type')
 
+  # Open pickled data loader
   with open(loader_path, 'rb') as f:
     loader = pickle.load(f)
 
+  # Set checkpoint paths either 'all', 'last', or a specific checkpoint
   if checkpoint_path == 'all':
     checkpoint_paths = sorted(os.listdir(params.checkpoint_dir_path))[:params.total_epochs]
   elif checkpoint_path == 'last':
@@ -87,12 +89,17 @@ def run(params, loader_type, checkpoint_path):
   if not os.path.exists(comp_dir_path):
     os.makedirs(comp_dir_path)
 
+  # Get prior processed checkpoints
   processed_checkpoints = get_processed_checkpoints(comp_dir_path)
 
+  # Iterate through each checkpoint, calculate PCC and RMSE, and output 
+  # checkpoint with best RMSE
   for i, checkpoint_path in enumerate(checkpoint_paths):
+
     print(timelog(f'waveform_test | {params.dir_path} | {loader_type} | {checkpoint_message} | {i}/{len(checkpoint_paths)}', start_time))
     if checkpoint_path in processed_checkpoints:
       continue
+
     checkpoint = torch.load(os.path.join(params.checkpoint_dir_path, checkpoint_path), weights_only=False)
     generator = Generator(len(params.in_channels))
     generator.load_state_dict(checkpoint['g_state_dict'])
@@ -114,3 +121,4 @@ if __name__ == '__main__':
   checkpoint_path = sys.argv[3]
   params = Params(os.path.join(dir_path, 'params.json'))
   run(params, loader_type, checkpoint_path)
+
