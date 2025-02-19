@@ -9,11 +9,44 @@ import matplotlib.pyplot as plt
 from datetime import datetime
 from paramutil import Params
 from recordutil import PROCESSED_DATA_PATH, SCGDataset
-from scipy.stats import pearsonr
+from scipy.stats import pearsonr, t
+from sklearn.metrics import mean_squared_error
 from time import time
 from timelog import timelog
 from torch.utils.data import DataLoader
 from waveform_train import Generator, get_last_checkpoint_path
+
+
+def reverse_minmax(tensor, orig_min, orig_max):
+  """
+  Reverse min-max normalization.
+  """
+  return tensor * (orig_max - orig_min) + orig_min
+
+
+def get_pcc(x, y):
+  """
+  Get pearson correlation coefficient values.
+  """
+  result = pearsonr(x, y)
+  pcc_r = result.statistic
+  pcc_p = result.pvalue
+  pcc_ci95 = result.confidence_interval(confidence_level=0.95)
+  return pcc_r, pcc_ci95.low, pcc_ci95.high
+
+
+def get_rmse(x, y):
+  """
+  Get root mean squared error values.
+  """
+  alpha = 0.05
+  n = len(x)
+  rmse = np.sqrt(mean_squared_error(x, y))
+  se = np.sqrt(rmse / (2 * n))
+  t_crit = t.ppf(1 - alpha/2, df=n - 1)
+  rmse_ci95_lower = rmse - t_crit * se
+  rmse_ci95_upper = rmse + t_crit * se
+  return rmse, rmse_ci95_lower, rmse_ci95_upper
 
 
 def get_waveform_comparisons(generator, loader):
@@ -27,12 +60,14 @@ def get_waveform_comparisons(generator, loader):
     filename = segment[2]
     start_idx = segment[3]
     stop_idx = segment[4]
-    x = real_rhc.detach().numpy()[0, :]
-    y = generator(scg).detach().numpy()[0, 0, :]
-    result = pearsonr(x, y)
-    pcc_r = result.statistic
-    pcc_p = result.pvalue
-    pcc_ci95 = result.confidence_interval(confidence_level=0.95)
+    min_rhc, max_rhc = segment[6]
+    
+    x = reverse_minmax(real_rhc.detach().numpy()[0, :], min_rhc, max_rhc)
+    y = reverse_minmax(generator(scg).detach().numpy()[0, 0, :], min_rhc, max_rhc)
+
+    pcc_r, pcc_ci95_lower, pcc_ci95_upper = get_pcc(x, y)
+    rmse, rmse_ci95_lower, rmse_ci95_upper = get_rmse(x, y)
+    
     comparison = {
       'filename': filename,
       'start_idx': int(start_idx),
@@ -40,9 +75,11 @@ def get_waveform_comparisons(generator, loader):
       'real_rhc': str(x.tolist()),
       'pred_rhc': str(y.tolist()),
       'pcc_r': pcc_r,
-      'pcc_p': pcc_p,
-      'pcc_ci95_low': pcc_ci95.low,
-      'pcc_ci95_high': pcc_ci95.high,
+      'pcc_ci95_lower': pcc_ci95_lower,
+      'pcc_ci95_upper': pcc_ci95_upper,
+      'rmse': rmse,
+      'rmse_ci95_lower': rmse_ci95_lower,
+      'rmse_ci95_upper': rmse_ci95_upper,
     }
     comparisons.append(comparison)
   return comparisons
@@ -55,7 +92,7 @@ def get_processed_checkpoints(comp_dir_path):
   return frozenset(f"{filename.split('.')[0]}.checkpoint" for filename in os.listdir(comp_dir_path))
 
 
-def run(params, loader_type, checkpoint_path):
+def run(params, loader_type, checkpoint_path, resume):
   """
   Run tests.
   """
@@ -85,12 +122,14 @@ def run(params, loader_type, checkpoint_path):
   else:
     checkpoint_paths = [checkpoint_path]
 
+  # Make comparison directory path if not exists
   comp_dir_path = os.path.join(params.comparison_dir_path, loader_type)
   if not os.path.exists(comp_dir_path):
     os.makedirs(comp_dir_path)
 
-  # Get prior processed checkpoints
-  processed_checkpoints = get_processed_checkpoints(comp_dir_path)
+  # Get prior processed checkpoints or empty list if intend to re-calculate 
+  # performance for all checkpoints
+  processed_checkpoints = get_processed_checkpoints(comp_dir_path) if resume else []
 
   # Iterate through each checkpoint, calculate PCC and RMSE, and output 
   # checkpoint with best RMSE
@@ -119,6 +158,7 @@ if __name__ == '__main__':
   dir_path = sys.argv[1]
   loader_type = sys.argv[2]
   checkpoint_path = sys.argv[3]
+  resume = sys.argv[4] != 'redo'
   params = Params(os.path.join(dir_path, 'params.json'))
-  run(params, loader_type, checkpoint_path)
+  run(params, loader_type, checkpoint_path, resume)
 
