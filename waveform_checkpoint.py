@@ -4,9 +4,9 @@ import os
 import pandas as pd
 import sys
 from paramutil import Params
-from scipy.stats import pearsonr
 from time import time
 from timelog import timelog
+from waveform_test import get_pcc, get_rmse
 
 
 def get_float_array(s):
@@ -22,27 +22,31 @@ def get_checkpoint_scores(params, start_time):
   """
   corrs = []
   comparison_dir_path = os.path.join(params.comparison_dir_path, 'valid')
-  checkpoint_paths = sorted(os.listdir(comparison_dir_path))
-  for i, comparison_path in enumerate(checkpoint_paths):
+  comparison_paths = sorted(os.listdir(comparison_dir_path))
+  
+  for i, comparison_path in enumerate(comparison_paths):
     all_pred = None
     all_real = None
     df = pd.read_csv(os.path.join(comparison_dir_path, comparison_path))
+    
     for _, row in df.iterrows():
       pred_rhc = get_float_array(row['pred_rhc'])
       real_rhc = get_float_array(row['real_rhc'])
       all_pred = pred_rhc if all_pred is None else np.concatenate((all_pred, pred_rhc))
       all_real = real_rhc if all_real is None else np.concatenate((all_real, real_rhc))
-    result = pearsonr(all_pred, all_real)
-    pcc_r = result.statistic
-    pcc_p = result.pvalue
-    pcc_ci95 = result.confidence_interval(confidence_level=0.95)
+    
+    pcc_r, pcc_ci95_lower, pcc_ci95_upper = get_pcc(all_real, all_pred)
+    rmse, rmse_ci95_lower, rmse_ci95_upper = get_rmse(all_real, all_pred)
+
     checkpoint = f"{comparison_path.split('.')[0]}.checkpoint"
     corrs.append({
       'checkpoint': checkpoint,
       'pcc_r': pcc_r,
-      'pcc_p': pcc_p,
-      'pcc_ci95_low': pcc_ci95.low,
-      'pcc_ci95_high': pcc_ci95.high
+      'pcc_ci95_lower': pcc_ci95_lower,
+      'pcc_ci95_upper': pcc_ci95_higher,
+      'rmse': rmse,
+      'rmse_ci95_lower': rmse_ci95_lower,
+      'rmse_ci95_upper': rmse_ci95_upper
     })
     print(timelog(f'waveform_checkpoint | {params.dir_path} | {i}/{len(checkpoint_paths)} | {pcc_r:.3f} {pcc_p:.3f} {pcc_ci95.low:.3f} {pcc_ci95.high:.3f}', start_time))
   return corrs
