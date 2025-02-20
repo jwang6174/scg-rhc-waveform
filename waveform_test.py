@@ -92,7 +92,7 @@ def get_processed_checkpoints(comp_dir_path):
   return frozenset(f"{filename.split('.')[0]}.checkpoint" for filename in os.listdir(comp_dir_path))
 
 
-def run(params, loader_type, checkpoint_path, resume):
+def run(params, loader_type, checkpoint_path):
   """
   Run tests.
   """
@@ -127,9 +127,8 @@ def run(params, loader_type, checkpoint_path, resume):
   if not os.path.exists(comp_dir_path):
     os.makedirs(comp_dir_path)
 
-  # Get prior processed checkpoints or empty list if intend to re-calculate 
-  # performance for all checkpoints
-  processed_checkpoints = get_processed_checkpoints(comp_dir_path) if resume else []
+  # Get prior processed checkpoints
+  processed_checkpoints = get_processed_checkpoints(comp_dir_path)
 
   # Iterate through each checkpoint, calculate PCC and RMSE, and output 
   # checkpoint with best RMSE
@@ -158,7 +157,6 @@ if __name__ == '__main__':
   dir_path = sys.argv[1]
   loader_type = sys.argv[2]
   checkpoint_path = sys.argv[3]
-  resume = sys.argv[4] != 'redo'
   params = Params(os.path.join(dir_path, 'params.json'))
   run(params, loader_type, checkpoint_path, resume)
 
