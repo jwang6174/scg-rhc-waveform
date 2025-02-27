@@ -3,6 +3,7 @@ import numpy as np
 import os
 import pandas as pd
 import pickle
+import shutil
 import sys
 import torch
 import matplotlib.pyplot as plt
@@ -127,6 +128,11 @@ def run(params, loader_type, checkpoint_path):
   if not os.path.exists(comp_dir_path):
     os.makedirs(comp_dir_path)
 
+  # Clear comparison directory if exists
+  else:
+    shutil.rmtree(comp_dir_path)    
+    
+
   # Get prior processed checkpoints
   processed_checkpoints = get_processed_checkpoints(comp_dir_path)
 
@@ -158,5 +164,5 @@ if __name__ == '__main__':
   loader_type = sys.argv[2]
   checkpoint_path = sys.argv[3]
   params = Params(os.path.join(dir_path, 'params.json'))
-  run(params, loader_type, checkpoint_path, resume)
+  run(params, loader_type, checkpoint_path)
 
