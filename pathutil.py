@@ -1,7 +1,7 @@
 import os
 import shutil
 
-DATA_PATH = os.path.join('/', 'home', 'jesse', 'physionet.org', 'files', 'scg-rhc-wearable-database', '1.0.0')
+DATA_PATH = os.path.join('/', 'home', 'jesse', 'scg-rhc-database')
 
 PROCESSED_DATA_PATH = os.path.join(DATA_PATH, 'processed_data')
 
