@@ -43,12 +43,12 @@ def get_checkpoint_scores(params, start_time):
       'checkpoint': checkpoint,
       'pcc_r': pcc_r,
       'pcc_ci95_lower': pcc_ci95_lower,
-      'pcc_ci95_upper': pcc_ci95_higher,
+      'pcc_ci95_upper': pcc_ci95_upper,
       'rmse': rmse,
       'rmse_ci95_lower': rmse_ci95_lower,
       'rmse_ci95_upper': rmse_ci95_upper
     })
-    print(timelog(f'waveform_checkpoint | {params.dir_path} | {i}/{len(checkpoint_paths)} | {pcc_r:.3f} {pcc_p:.3f} {pcc_ci95.low:.3f} {pcc_ci95.high:.3f}', start_time))
+    print(timelog(f'waveform_checkpoint | {params.dir_path} | {i}/{len(comparison_paths)} | {pcc_r:.3f} [{pcc_ci95_lower:.3f}, {pcc_ci95_upper:.3f}] | {rmse:.3f} | [{rmse_ci95_lower:.3f}, {rmse_ci95_upper:.3f}]', start_time))
   return corrs
 
 
