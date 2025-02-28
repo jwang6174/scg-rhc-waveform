@@ -127,12 +127,7 @@ def run(params, loader_type, checkpoint_path):
   comp_dir_path = os.path.join(params.comparison_dir_path, loader_type)
   if not os.path.exists(comp_dir_path):
     os.makedirs(comp_dir_path)
-
-  # Clear comparison directory if exists
-  else:
-    shutil.rmtree(comp_dir_path)    
     
-
   # Get prior processed checkpoints
   processed_checkpoints = get_processed_checkpoints(comp_dir_path)
 
